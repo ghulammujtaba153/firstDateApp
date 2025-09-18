@@ -12,7 +12,7 @@ const GenderSection = () => {
   return (
     <div className="w-full text-center">
       <div className="text-left my-4">
-        <h2 className="text-xl font-semibold mb-2">Be truth to yourself 🌟</h2>
+        <h2 className="text-xl font-semibold mb-2">Be true to yourself 🌟</h2>
       <p className="text-gray-400 mb-4">
         Choose the gender that best represents you.  
         Authenticity is key to meaningful connections.
