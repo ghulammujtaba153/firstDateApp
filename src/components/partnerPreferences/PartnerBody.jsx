@@ -2,28 +2,28 @@ import React, { useState } from "react";
 import { FaSearch } from "react-icons/fa"; // <-- Add this import
 
 const options = [
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Chubby", value: "Chubby" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
+  { label: "Slim 🧍‍♀️", value: "Slim" },
+  { label: "Athletic 💪", value: "Athletic" },
+  { label: "Average 🙂", value: "Average" },
+  { label: "Heavy 🍔", value: "Heavy" },
+  { label: "Athletic 🏋️‍♂️", value: "Lean" },
+  { label: "Fit 🏋️‍♂️", value: "Fit" },
+  { label: "Muscular🙂", value: "Muscular" },
+  { label: "Broad 💪", value: "Broad" },
+  { label: "Stocky 🏋️‍♂️", value: "Stocky" },
+  { label: "Tall 💪", value: "Tall" },
+  { label: "Petite 🍔", value: "Petite" },
+  { label: "Curvy 🍔", value: "Curvy" },
+  { label: "Toned 🙂", value: "Toned" },
+  { label: "Chubby 🍔", value: "Chubby" },
+  { label: "Plus Size 🏋️‍♂️", value: "Plus Size" },
+  { label: "Bulky 💪", value: "Bulky" },
+  { label: "Lean-Athletic 🍔", value: "Lean-Athletic" },
+  { label: "Endomorphic 🙂", value: "Endomorphic" },
+  { label: "Mesomorphic 🏋️‍♂️", value: "Mesomorphic" },
 ];
 
-const HoobiesSection = () => {
+const PartnerBody = () => {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
 
@@ -42,7 +42,7 @@ const HoobiesSection = () => {
   return (
     <div className="text-center">
       <div className="my-4 text-left">
-        <h1 className="text-xl font-bold mb-2">Lifestyle & hobbies 🎧</h1>
+        <h1 className="text-xl font-bold mb-2">Partner body type 🦵</h1>
         <p className="text-gray-600 mb-4">
           Lorem Ipsum is simply dummy text of the printing and typesetting industry.
         </p>
@@ -78,13 +78,10 @@ const HoobiesSection = () => {
           </button>
         ))}
       </div>
-
-      {/* Debug: Show selected values */}
-      {/* <div className="mt-4 text-sm text-gray-600">
-        Selected: {selected.length > 0 ? selected.join(", ") : "None"}
-      </div> */}
     </div>
   );
 };
 
-export default HoobiesSection;
+
+
+export default PartnerBody

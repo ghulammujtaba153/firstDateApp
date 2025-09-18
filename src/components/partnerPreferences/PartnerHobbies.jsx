@@ -23,7 +23,7 @@ const options = [
   { label: "Foodie 🍕", value: "Fit" },
 ];
 
-const HoobiesSection = () => {
+const PartnerHoobies = () => {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
 
@@ -42,7 +42,7 @@ const HoobiesSection = () => {
   return (
     <div className="text-center">
       <div className="my-4 text-left">
-        <h1 className="text-xl font-bold mb-2">Lifestyle & hobbies 🎧</h1>
+        <h1 className="text-xl font-bold mb-2">Partner Lifestyle & hobbies 🎧</h1>
         <p className="text-gray-600 mb-4">
           Lorem Ipsum is simply dummy text of the printing and typesetting industry.
         </p>
@@ -87,4 +87,4 @@ const HoobiesSection = () => {
   );
 };
 
-export default HoobiesSection;
+export default PartnerHoobies;

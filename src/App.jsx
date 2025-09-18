@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import EmailVerification from "./pages/EmailVerification";
 import OnBoarding from "./pages/OnBoarding";
+import PartnerPreferences from "./pages/PartnerPreferences";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/login" element={<Login/>} />
         <Route path="/email-verification" element={<EmailVerification/>} />
         <Route path="/onboarding" element={<OnBoarding/>} />
+        <Route path="/onboarding/partner-preferences" element={<PartnerPreferences/>} />
       </Routes>
     </BrowserRouter>
   )

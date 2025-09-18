@@ -2,28 +2,25 @@ import React, { useState } from "react";
 import { FaSearch } from "react-icons/fa"; // <-- Add this import
 
 const options = [
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Chubby", value: "Chubby" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
+  { label: "Smoker 🚬", value: "Slim" },
+  { label: "Non smoker 🚭", value: "Athletic" },
+  { label: "Drinks 🍷", value: "Average" },
+  { label: "Heavy ⚡", value: "Heavy" },
+  { label: "Smoker 🚬", value: "Slim" },
+  { label: "Non smoker 🚭", value: "Athletic" },
+  { label: "Drinks 🍷", value: "Average" },
+  { label: "Heavy ⚡", value: "Heavy" },
+  { label: "Smoker 🚬", value: "Slim" },
+  { label: "Non smoker 🚭", value: "Athletic" },
+  { label: "Drinks 🍷", value: "Average" },
+  { label: "Heavy ⚡", value: "Heavy" },
+  { label: "Smoker 🚬", value: "Slim" },
+  { label: "Non smoker 🚭", value: "Athletic" },
+  { label: "Drinks 🍷", value: "Average" },
+  { label: "Heavy ⚡", value: "Heavy" },
 ];
 
-const HoobiesSection = () => {
+const PartnerHealth = () => {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
 
@@ -42,11 +39,11 @@ const HoobiesSection = () => {
   return (
     <div className="text-center">
       <div className="my-4 text-left">
-        <h1 className="text-xl font-bold mb-2">Lifestyle & hobbies 🎧</h1>
-        <p className="text-gray-600 mb-4">
-          Lorem Ipsum is simply dummy text of the printing and typesetting industry.
-        </p>
-      </div>
+        <h1 className="text-xl font-bold mb-2">Partner health info 🩺</h1>
+      <p className="text-gray-600 mb-4">
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+      </p>
+        </div>
 
       {/* Search Bar with Icon */}
       <div className="relative w-full max-w-md mx-auto mb-4">
@@ -55,7 +52,7 @@ const HoobiesSection = () => {
         </span>
         <input
           type="text"
-          placeholder="Search body type..."
+          placeholder="Search health info..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:outline-none"
@@ -78,13 +75,11 @@ const HoobiesSection = () => {
           </button>
         ))}
       </div>
-
-      {/* Debug: Show selected values */}
-      {/* <div className="mt-4 text-sm text-gray-600">
-        Selected: {selected.length > 0 ? selected.join(", ") : "None"}
-      </div> */}
     </div>
   );
 };
 
-export default HoobiesSection;
+
+
+
+export default PartnerHealth

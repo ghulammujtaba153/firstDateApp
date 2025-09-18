@@ -2,24 +2,18 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Notification from "../components/common/Notification";
 import { FaArrowLeft } from "react-icons/fa";
-import GenderSection from "../components/onboarding/GenderSection";
-import HealthSection from "../components/onboarding/HealthSection";
-import BodyTypeSection from "../components/onboarding/BodyTypeSection";
-import PhotosSection from "../components/onboarding/PhotosSection";
-import DOBSection from "../components/onboarding/DOBSection";
-import EducationSection from "../components/onboarding/EducationSection";
-import HeightSection from "../components/onboarding/HeightSection";
-import HobbiesSection from "../components/onboarding/HobbiesSection";
-import WeightSection from "../components/onboarding/WeightSection";
-import Locationsection from "../components/onboarding/Locationsection";
-import UserNameSection from "../components/onboarding/UserNameSection";
+import PartnerAge from "../components/partnerPreferences/PartnerAge";
+import PartnerBody from "../components/partnerPreferences/PartnerBody";
+import PartnerHealth from "../components/partnerPreferences/PartnerHealth";
+import PartnerHobbies from "../components/partnerPreferences/PartnerHobbies";
+import PartnerLocation from "../components/partnerPreferences/PartnerLocation";
 
-const OnBoarding = () => {
+const PartnerPreferences = () => {
   const [show, setShow] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // total steps based on sections
-  const totalSteps = 10; // last index (0–10)
+  // total steps (adjust according to available sections)
+  const totalSteps = 4; // last index (0–4) → 5 steps total
 
   // progress percentage
   const progress = ((currentStep + 1) / (totalSteps + 1)) * 100;
@@ -28,10 +22,10 @@ const OnBoarding = () => {
     <div className="flex px-4 flex-col justify-center items-center min-h-screen gap-6 w-full">
       {show && (
         <Notification
-          title="Setup Complete!"
-          message="Your profile has been successfully created."
-          link="partner-preferences"
-          linkText="continue"
+          title="Preferences Saved!"
+          message="Your partner preferences has been successfully saved."
+          link="/"
+          linkText="Continue"
           onClose={() => setShow(false)}
         />
       )}
@@ -57,20 +51,15 @@ const OnBoarding = () => {
           </div>
 
           {/* Render based on step */}
-          {currentStep === 0 && <UserNameSection />}
-          {currentStep === 1 && <GenderSection />}
-          {currentStep === 2 && <DOBSection />}
-          {currentStep === 3 && <HeightSection />}
-          {currentStep === 4 && <WeightSection />}
-          {currentStep === 5 && <BodyTypeSection />}
-          {currentStep === 6 && <HealthSection />}
-          {currentStep === 7 && <EducationSection />}
-          {currentStep === 8 && <HobbiesSection />}
-          {currentStep === 9 && < PhotosSection/>}
-          {currentStep === 10 && <Locationsection />}
+          {currentStep === 0 && <PartnerAge />}
+          {currentStep === 1 && <PartnerBody />}
+          {currentStep === 2 && <PartnerHealth />}
+          {currentStep === 3 && <PartnerHobbies />}
+          {currentStep === 4 && <PartnerLocation />}
 
           {/* Navigation buttons */}
           <div className="flex justify-between mt-6">
+            {/* Back button (optional) */}
             {/* <button
               disabled={currentStep === 0}
               onClick={() => setCurrentStep((prev) => prev - 1)}
@@ -78,6 +67,7 @@ const OnBoarding = () => {
             >
               Back
             </button> */}
+
             <button
               onClick={() => {
                 if (currentStep < totalSteps) {
@@ -97,4 +87,4 @@ const OnBoarding = () => {
   );
 };
 
-export default OnBoarding;
+export default PartnerPreferences;
