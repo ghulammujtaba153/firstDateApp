@@ -23,12 +23,20 @@ const Notification = ({ title, message, link, linkText, onClose }) => {
         <p className="text-gray-500 mt-2">{message}</p>
 
         {/* Action Link */}
-        <Link
+        {link && <Link
           to={link}
           className="inline-block w-full bg-primary text-white px-6 py-3 rounded-full mt-6 hover:opacity-90 transition"
         >
           {linkText}
-        </Link>
+        </Link>}
+
+
+        {!link && <button
+          onClick={onClose}
+          className="inline-block w-full bg-primary text-white px-6 py-3 rounded-full mt-6 hover:opacity-90 transition"
+        >
+          {linkText}
+        </button>}
       </div>
     </div>
   );

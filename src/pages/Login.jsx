@@ -56,6 +56,9 @@ const Login = () => {
               className="outline-none w-full bg-transparent"
             />
           </div>
+          <Link to="/forget-password" className="self-end text-sm text-primary mb-2">
+            Forgot Password?
+          </Link>
 
           {/* Password */}
           <label className="self-start mb-1 font-medium">Password</label>
