@@ -22,12 +22,15 @@ const Header = () => {
 
       {/* Right: Icons + Avatar */}
       <div className="flex items-center space-x-6">
-        <button className="text-gray-600 hover:text-primary">
-          <FaCommentDots size={20} />
-        </button>
-        <button className="text-gray-600 hover:text-primary">
+
+        <button className="text-primary  rounded-lg p-1">
           <FaBell size={20} />
         </button>
+        
+        <button className="text-primary  rounded-lg p-1">
+          <FaCommentDots size={20}  />
+        </button>
+
 
         <div className="h-10 w-px bg-gray-900"></div>
 
