@@ -48,6 +48,7 @@ const Sidebar = () => {
               <li key={index}>
                 <NavLink
                   to={item.path}
+                  end={item.path === "/dashboard"} // Only exact match for Dashboard
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-3 rounded-full transition-colors duration-200 
                     ${

@@ -38,7 +38,7 @@ const Header = () => {
         {/* Profile Dropdown */}
         <div className="relative">
           <img
-            src="https://via.placeholder.com/40"
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" 
             alt="profile"
             className="rounded-full w-10 h-10 cursor-pointer"
             onClick={() => setDropdownOpen(!dropdownOpen)}

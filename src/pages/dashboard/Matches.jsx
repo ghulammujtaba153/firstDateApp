@@ -4,11 +4,11 @@ import { FaArrowRight, FaSearch } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 const matchData = [
-  { id: 1, name: "John Doe", isVerified: true, image: "https://randomuser.me/api/portraits/lego/1.jpg", distance: "2 miles away" },
-  { id: 2, name: "Jane Smith", isVerified: true, image: "https://randomuser.me/api/portraits/lego/1.jpg", distance: "2 miles away" },
-  { id: 3, name: "Jane Smith", isVerified: true, image: "https://randomuser.me/api/portraits/lego/1.jpg", distance: "2 miles away" },
-  { id: 4, name: "Jane Smith", isVerified: true, image: "https://randomuser.me/api/portraits/lego/1.jpg", distance: "2 miles away" },
-  { id: 5, name: "Jane Smith", isVerified: false, image: "https://randomuser.me/api/portraits/lego/1.jpg", distance: "2 miles away" },
+  { id: 1, name: "John Doe", isVerified: true, image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" , distance: "2 miles away" },
+  { id: 2, name: "Jane Smith", isVerified: true, image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" , distance: "2 miles away" },
+  { id: 3, name: "Jane Smith", isVerified: true, image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" , distance: "2 miles away" },
+  { id: 4, name: "Jane Smith", isVerified: true, image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" , distance: "2 miles away" },
+  { id: 5, name: "Jane Smith", isVerified: false, image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" , distance: "2 miles away" },
   // Add more items for pagination demo if needed
 ];
 
@@ -29,7 +29,7 @@ const Matches = () => {
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
   return (
-    <div className="flex flex-col gap-4 shadow-lg p-4 rounded-lg">
+    <div className="flex flex-col gap-4 shadow-lg p-6 rounded-[30px]">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
         <h1 className="font-semibold">Matches</h1>
         <div className="flex items-center gap-2 w-full md:w-auto">

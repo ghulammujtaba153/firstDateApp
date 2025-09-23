@@ -27,8 +27,8 @@ const Login = () => {
         <Notification
           title="Account Created!"
           message="Your account has been successfully created."
-          link="/login"
-          linkText="Go to Login"
+          link="/dashboard"
+          linkText="Go to dashboard"
           onClose={() => setShow(false)}
         />
       )}
