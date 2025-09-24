@@ -17,6 +17,7 @@ import Settings from "./pages/dashboard/Settings";
 import Profile from "./pages/dashboard/Profile";
 import Subscription from "./pages/dashboard/Subscription";
 import Chats from "./pages/dashboard/Chats";
+import FaceVerification from "./pages/FaceVerification";
 
 function App() {
   return (
@@ -26,6 +27,8 @@ function App() {
 
         <Route path="/" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        
+        <Route path="/verification" element={<FaceVerification />} />
         <Route path="/forget-password" element={<ForgetPassword />} />
         <Route path="/forget-password/otp" element={<OTP />} />
         <Route
