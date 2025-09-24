@@ -16,6 +16,7 @@ import Events from "./pages/dashboard/Events";
 import Settings from "./pages/dashboard/Settings";
 import Profile from "./pages/dashboard/Profile";
 import Subscription from "./pages/dashboard/Subscription";
+import Chats from "./pages/dashboard/Chats";
 
 function App() {
   return (
@@ -46,6 +47,19 @@ function App() {
             </DashboardLayout>
           }
         />
+
+
+
+          <Route
+          path="/dashboard/chats"
+          element={
+            <DashboardLayout>
+              <Chats />
+            </DashboardLayout>
+          }
+        />
+
+        
 
 
         <Route

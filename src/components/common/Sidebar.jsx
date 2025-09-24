@@ -7,19 +7,24 @@ import {
   FaCog,
   FaCalendarAlt,
   FaSignOutAlt,
+  FaPhone,
+  FaMoneyBillAlt,
 } from "react-icons/fa";
+import { TfiStar } from "react-icons/tfi";
+import { MdOutlinePrivacyTip } from "react-icons/md";
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
 
   const menuItems = [
     { name: "Dashboard", icon: <FaTachometerAlt />, path: "/dashboard" },
-    { name: "Matches", icon: <FaTachometerAlt />, path: "/dashboard/matches" },
+    { name: "Chats", icon: <FaPhone />, path: "/dashboard/chats" },
+    { name: "Matches", icon: <TfiStar />, path: "/dashboard/matches" },
     { name: "Events", icon: <FaCalendarAlt />, path: "/dashboard/events" },
-    { name: "Subscriptions", icon: <FaTachometerAlt />, path: "/dashboard/subscriptions" },
+    { name: "Subscriptions", icon: <FaMoneyBillAlt />, path: "/dashboard/subscriptions" },
     { name: "Profile", icon: <FaUser />, path: "/dashboard/profile" },
     { name: "Settings", icon: <FaCog />, path: "/dashboard/settings" },
-    { name: "Privacy Policy", icon: <FaCog />, path: "/dashboard/privacy-policy" },
+    { name: "Privacy Policy", icon: <MdOutlinePrivacyTip />, path: "/dashboard/privacy-policy" },
     { name: "Logout", icon: <FaSignOutAlt />, path: "/logout" },
   ];
 
