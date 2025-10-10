@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 
-const PartnerLocation = () => {
-  const [location, setLocation] = useState("");
+const PartnerLocation = ({ form, setForm }) => {
   const [nearMe, setNearMe] = useState(false);
 
   const usaCities = [
@@ -17,6 +16,13 @@ const PartnerLocation = () => {
     "Atlanta",
   ];
 
+  const handleChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      partnerLocation: value,
+    }));
+  };
+
   return (
     <div className="text-center">
       <div className="my-4 text-left">
@@ -29,10 +35,10 @@ const PartnerLocation = () => {
 
         {/* Dropdown for USA Cities */}
         <select
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
+          value={form.partnerLocation}
+          onChange={(e) => handleChange(e.target.value)}
           disabled={nearMe}
-          className="w-full px-4 py-2 border rounded-lg bg-gray-100 outline-none"
+          className="w-full px-4 py-2 border rounded-lg bg-gray-100 outline-none disabled:opacity-60"
         >
           <option value="">Select a city</option>
           {usaCities.map((city) => (
@@ -50,11 +56,15 @@ const PartnerLocation = () => {
             checked={nearMe}
             onChange={(e) => {
               setNearMe(e.target.checked);
-              if (e.target.checked) setLocation(""); // clear city if "Near Me" is selected
+              if (e.target.checked) {
+                handleChange("Near Me"); // Save "Near Me" into form
+              } else {
+                handleChange(""); // Clear if unchecked
+              }
             }}
-            className="w-5 h-5 accent-primary"
+            className="w-5 h-5 accent-primary cursor-pointer"
           />
-          <label htmlFor="nearMe" className="ml-2 text-gray-700">
+          <label htmlFor="nearMe" className="ml-2 text-gray-700 cursor-pointer">
             Near Me
           </label>
         </div>

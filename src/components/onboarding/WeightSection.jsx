@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 
-const WeightSection = () => {
-  const [weight, setWeight] = useState("");
-
+const WeightSection = ({ value, onChange }) => {
   return (
     <div className="max-w-md mx-auto text-center">
       <div className="my-4 text-left">
@@ -15,11 +13,14 @@ const WeightSection = () => {
       <div className="flex items-center justify-center gap-2">
         <input
           type="number"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value)}
+          value={value || ""}
+          onChange={(e) => onChange(Number(e.target.value))}
           placeholder="Enter weight in kg"
           className="w-full px-3 py-2 bg-gray-100 border rounded-lg outline-none text-center"
+          min="30"
+          max="300"
         />
+        <span className="text-gray-500">kg</span>
       </div>
     </div>
   );

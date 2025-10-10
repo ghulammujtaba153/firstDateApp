@@ -1,14 +1,14 @@
 import React, { useState } from "react";
-import { FaSearch } from "react-icons/fa"; // <-- Add this import
+import { FaSearch } from "react-icons/fa";
 
 const options = [
   { label: "Slim 🧍‍♀️", value: "Slim" },
   { label: "Athletic 💪", value: "Athletic" },
   { label: "Average 🙂", value: "Average" },
   { label: "Heavy 🍔", value: "Heavy" },
-  { label: "Athletic 🏋️‍♂️", value: "Lean" },
+  { label: "Lean 🏋️‍♂️", value: "Lean" },
   { label: "Fit 🏋️‍♂️", value: "Fit" },
-  { label: "Muscular🙂", value: "Muscular" },
+  { label: "Muscular 🙂", value: "Muscular" },
   { label: "Broad 💪", value: "Broad" },
   { label: "Stocky 🏋️‍♂️", value: "Stocky" },
   { label: "Tall 💪", value: "Tall" },
@@ -23,16 +23,17 @@ const options = [
   { label: "Mesomorphic 🏋️‍♂️", value: "Mesomorphic" },
 ];
 
-const PartnerBody = () => {
-  const [selected, setSelected] = useState([]);
+const PartnerBody = ({ form, setForm }) => {
   const [search, setSearch] = useState("");
 
   const toggleSelect = (value) => {
-    if (selected.includes(value)) {
-      setSelected(selected.filter((item) => item !== value)); // remove if already selected
+    let updated;
+    if (form.partnerBodyType.includes(value)) {
+      updated = form.partnerBodyType.filter((item) => item !== value);
     } else {
-      setSelected([...selected, value]); // add new selection
+      updated = [...form.partnerBodyType, value];
     }
+    setForm({ ...form, partnerBodyType: updated });
   };
 
   const filteredOptions = options.filter((opt) =>
@@ -44,11 +45,11 @@ const PartnerBody = () => {
       <div className="my-4 text-left">
         <h1 className="text-xl font-bold mb-2">Partner body type 🦵</h1>
         <p className="text-gray-600 mb-4">
-          Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+          Select the body types you’d prefer for your partner.
         </p>
       </div>
 
-      {/* Search Bar with Icon */}
+      {/* Search Bar */}
       <div className="relative w-full max-w-md mx-auto mb-4">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
           <FaSearch />
@@ -62,14 +63,14 @@ const PartnerBody = () => {
         />
       </div>
 
-      {/* Options Grid */}
+      {/* Options */}
       <div className="flex flex-wrap gap-3 justify-left">
         {filteredOptions.map((option) => (
           <button
             key={option.value}
             onClick={() => toggleSelect(option.value)}
             className={`px-4 py-2 rounded-full border transition ${
-              selected.includes(option.value)
+              form.partnerBodyType.includes(option.value)
                 ? "bg-primary/10 text-primary border-primary"
                 : "border-gray-300 text-gray-700 hover:bg-gray-100"
             }`}
@@ -82,6 +83,4 @@ const PartnerBody = () => {
   );
 };
 
-
-
-export default PartnerBody
+export default PartnerBody;

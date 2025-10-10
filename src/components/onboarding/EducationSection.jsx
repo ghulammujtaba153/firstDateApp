@@ -1,13 +1,22 @@
 import React from "react";
 
-const EducationSection = () => {
+const EducationSection = ({ value = {}, onChange }) => {
+  const handleChange = (field, val) => {
+    if (onChange) {
+      onChange({
+        ...value,
+        [field]: val,
+      });
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto text-center">
       <div className="my-4 text-left">
         <h1 className="text-xl font-bold mb-2">Education level 🎓</h1>
-      <p className="text-gray-600 mb-6">
-        Share your education details to help us personalize your experience.
-      </p>
+        <p className="text-gray-600 mb-6">
+          Share your education details to help us personalize your experience.
+        </p>
       </div>
 
       <div className="flex flex-col gap-4 text-left">
@@ -17,6 +26,8 @@ const EducationSection = () => {
           </label>
           <input
             type="text"
+            value={value.field || ""}
+            onChange={(e) => handleChange("field", e.target.value)}
             placeholder="e.g. Computer Science"
             className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none"
           />
@@ -28,6 +39,8 @@ const EducationSection = () => {
           </label>
           <input
             type="text"
+            value={value.occupation || ""}
+            onChange={(e) => handleChange("occupation", e.target.value)}
             placeholder="e.g. Software Engineer"
             className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none"
           />
@@ -39,6 +52,8 @@ const EducationSection = () => {
           </label>
           <input
             type="text"
+            value={value.university || ""}
+            onChange={(e) => handleChange("university", e.target.value)}
             placeholder="e.g. University of California, Berkeley"
             className="w-full px-4 py-2 bg-gray-100 rounded-lg focus:outline-none"
           />

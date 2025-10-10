@@ -1,38 +1,29 @@
 import React, { useState } from "react";
-import { FaSearch } from "react-icons/fa"; // <-- Add this import
+import { FaSearch } from "react-icons/fa";
 
 const options = [
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Chubby", value: "Chubby" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
+  { label: "Travel ✈️", value: "Travel" },
+  { label: "Sports ⚽", value: "Sports" },
+  { label: "Reading 📚", value: "Reading" },
+  { label: "Music 🎵", value: "Music" },
+  { label: "Movies 🎬", value: "Movies" },
+  { label: "Foodie 🍕", value: "Foodie" },
+  { label: "Dancing 💃", value: "Dancing" },
+  { label: "Gaming 🎮", value: "Gaming" },
+  { label: "Fitness 🏋️‍♂️", value: "Fitness" },
 ];
 
-const PartnerHoobies = () => {
-  const [selected, setSelected] = useState([]);
+const PartnerHobbies = ({ form, setForm }) => {
   const [search, setSearch] = useState("");
 
   const toggleSelect = (value) => {
-    if (selected.includes(value)) {
-      setSelected(selected.filter((item) => item !== value)); // remove if already selected
+    let updated;
+    if (form.partnerHobbies.includes(value)) {
+      updated = form.partnerHobbies.filter((item) => item !== value);
     } else {
-      setSelected([...selected, value]); // add new selection
+      updated = [...form.partnerHobbies, value];
     }
+    setForm({ ...form, partnerHobbies: updated });
   };
 
   const filteredOptions = options.filter((opt) =>
@@ -42,20 +33,20 @@ const PartnerHoobies = () => {
   return (
     <div className="text-center">
       <div className="my-4 text-left">
-        <h1 className="text-xl font-bold mb-2">Partner Lifestyle & hobbies 🎧</h1>
+        <h1 className="text-xl font-bold mb-2">Partner Lifestyle & Hobbies 🎧</h1>
         <p className="text-gray-600 mb-4">
-          Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+          Select hobbies and interests you'd like your partner to share.
         </p>
       </div>
 
-      {/* Search Bar with Icon */}
+      {/* Search Bar */}
       <div className="relative w-full max-w-md mx-auto mb-4">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
           <FaSearch />
         </span>
         <input
           type="text"
-          placeholder="Search body type..."
+          placeholder="Search hobbies..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:outline-none"
@@ -69,7 +60,7 @@ const PartnerHoobies = () => {
             key={option.value}
             onClick={() => toggleSelect(option.value)}
             className={`px-4 py-2 rounded-full border transition ${
-              selected.includes(option.value)
+              form.partnerHobbies.includes(option.value)
                 ? "bg-primary/10 text-primary border-primary"
                 : "border-gray-300 text-gray-700 hover:bg-gray-100"
             }`}
@@ -78,13 +69,8 @@ const PartnerHoobies = () => {
           </button>
         ))}
       </div>
-
-      {/* Debug: Show selected values */}
-      {/* <div className="mt-4 text-sm text-gray-600">
-        Selected: {selected.length > 0 ? selected.join(", ") : "None"}
-      </div> */}
     </div>
   );
 };
 
-export default PartnerHoobies;
+export default PartnerHobbies;

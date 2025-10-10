@@ -18,107 +18,146 @@ import Profile from "./pages/dashboard/Profile";
 import Subscription from "./pages/dashboard/Subscription";
 import Chats from "./pages/dashboard/Chats";
 import FaceVerification from "./pages/FaceVerification";
+import VideoCall from "./pages/dashboard/VideoCall";
+import HomePage from "./pages/dashboard/call/HomePage";
+import VideoCallPage from "./pages/dashboard/call/VideoCallPage";
+import WaitingRoomPage from "./pages/dashboard/call/WaitingRoomPage";
+import CreateCallPage from "./pages/dashboard/call/CreateCallPage";
+import JoinCallPage from "./pages/dashboard/call/JoinCallPage";
+import SettingsPage from "./pages/dashboard/call/SettingsPage";
+import ProtectedRoute from "./components/ProtectedRoutes";
+import UserRoutes from "./components/UserRoutes";
+import GoogleAuth from "./pages/GoogleAuth";
+import FreeScreenProtectedRoutes from "./components/FreeScreenProtectedRoutes";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Example route */}
+        {/* route */}
 
-        <Route path="/" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-        
+        <Route path="/" element={<UserRoutes />} />
         <Route path="/verification" element={<FaceVerification />} />
-        <Route path="/forget-password" element={<ForgetPassword />} />
-        <Route path="/forget-password/otp" element={<OTP />} />
-        <Route
-          path="/forget-password/reset-password"
-          element={<ResetPassword />}
-        />
-        <Route path="/email-verification" element={<EmailVerification />} />
-        <Route path="/onboarding" element={<OnBoarding />} />
-        <Route
-          path="/onboarding/partner-preferences"
-          element={<PartnerPreferences />}
-        />
 
-        <Route
-          path="/dashboard"
-          element={
-            <DashboardLayout>
-              <Home />
-            </DashboardLayout>
-          }
-        />
+        {/* Onboarding routes - accessible to authenticated users who haven't completed onboarding */}
+        <Route path="/onboarding" element={<OnBoarding />} />
+        <Route path="/onboarding/partner-preferences" element={<PartnerPreferences />} />
+
+        <Route element={<FreeScreenProtectedRoutes />}>
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+
+
+          <Route path="/forget-password" element={<ForgetPassword />} />
+          <Route path="/forget-password/otp" element={<OTP />} />
+
+
+
+
+          <Route path="/video-call" element={<HomePage />} />
+          <Route path="/join" element={<JoinCallPage />} />
+          <Route path="/create" element={<CreateCallPage />} />
+          <Route path="/waiting" element={<WaitingRoomPage />} />
+          <Route path="/call" element={<VideoCallPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+
+
 
 
 
           <Route
-          path="/dashboard/chats"
-          element={
-            <DashboardLayout>
-              <Chats />
-            </DashboardLayout>
-          }
-        />
+            path="/forget-password/reset-password"
+            element={<ResetPassword />}
+          />
+          <Route path="/email-verification" element={<EmailVerification />} />
 
-        
+          <Route path="/google-auth" element={<GoogleAuth />} />
+        </Route>
 
-
-        <Route
-          path="/dashboard/privacy-policy"
-          element={
-            <DashboardLayout>
-              <PrivacyPolicy />
-            </DashboardLayout>
-          }
-        />
-
-        <Route
-          path="/dashboard/matches"
-          element={
-            <DashboardLayout>
-              <Matches />
-            </DashboardLayout>
-          }
-        />
-
-        <Route
-          path="/dashboard/events"
-          element={
-            <DashboardLayout>
-              <Events />
-            </DashboardLayout>
-          }
-        />
-
-        <Route
-          path="/dashboard/Settings"
-          element={
-            <DashboardLayout>
-              <Settings />
-            </DashboardLayout>
-          }
-        />
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/dashboard"
+            element={
+              <DashboardLayout>
+                <Home />
+              </DashboardLayout>
+            }
+          />
 
 
-        <Route
-          path="/dashboard/profile"
-          element={
-            <DashboardLayout>
-              <Profile />
-            </DashboardLayout>
-          }
-        />
 
-        <Route
-          path="/dashboard/subscriptions"
-          element={
-            <DashboardLayout>
-              <Subscription />
-            </DashboardLayout>
-          }
-        />
+          <Route
+            path="/dashboard/chats"
+            element={
+              <DashboardLayout>
+                <Chats />
+              </DashboardLayout>
+            }
+          />
+
+
+
+
+          <Route
+            path="/dashboard/privacy-policy"
+            element={
+              <DashboardLayout>
+                <PrivacyPolicy />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/dashboard/matches"
+            element={
+              <DashboardLayout>
+                <Matches />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/dashboard/events"
+            element={
+              <DashboardLayout>
+                <Events />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/dashboard/Settings"
+            element={
+              <DashboardLayout>
+                <Settings />
+              </DashboardLayout>
+            }
+          />
+
+
+          <Route
+            path="/dashboard/profile"
+            element={
+              <DashboardLayout>
+                <Profile />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/dashboard/subscriptions"
+            element={
+              <DashboardLayout>
+                <Subscription />
+              </DashboardLayout>
+            }
+          />
+
+        </Route>
+
+
+
+
       </Routes>
     </BrowserRouter>
   );

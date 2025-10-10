@@ -2,14 +2,16 @@ import React, { useState, useRef } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Notification from "../components/common/Notification";
+import axios from "axios";
+import { BASE_URL } from "../config/url";
 
 const OTP = () => {
    const location = useLocation();
   const email = location.state?.email || "";
-
   const [otp, setOtp] = useState(["", "", "", ""]);
   const inputs = useRef([]);
   const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e, index) => {
     const value = e.target.value.replace(/[^0-9]/g, ""); // allow only numbers
@@ -38,7 +40,20 @@ const OTP = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const otpValue = otp.join("");
-    navigate("/forget-password/reset-password", { state: { email, otp: otpValue } });
+    setLoading(true);
+    try {
+      const res = axios.post(`${BASE_URL}/api/otp/verify`, {
+        email,
+        otp: otpValue
+      })
+
+          navigate("/forget-password/reset-password", { state: { email, otp: otpValue } });
+
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
     
   }
 
@@ -83,8 +98,8 @@ const OTP = () => {
         </div>
 
 
-        <button onClick={handleSubmit} className="bg-primary text-white px-6 py-3 rounded-full mt-4 w-full">
-          Verify
+        <button disabled={loading} onClick={handleSubmit} className="bg-primary text-white px-6 py-3 rounded-full mt-4 w-full">
+          {loading ? "Verifying..." : "Verify"}
         </button>
 
         <p className="text-sm">

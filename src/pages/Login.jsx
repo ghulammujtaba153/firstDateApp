@@ -1,47 +1,90 @@
 import React, { useState } from "react";
-import { FaEnvelope, FaLock, FaPhoneAlt, FaGoogle, FaEye } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaGoogle, FaEye } from "react-icons/fa";
 import { LuEyeClosed } from "react-icons/lu";
 import { Link } from "react-router-dom";
 import Notification from "../components/common/Notification";
+import axios from "axios";
+import { BASE_URL } from "../config/url";
+import { useAuth } from "../context/authContext";
 
 const Login = () => {
-  const [show, setShow] = useState(false);
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
-  const [showPassword, setShowPassword] = useState(false); // <-- Add state
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState(null); // {title, message, type}
+  const { login } = useAuth(); // assuming you store logged in user in context
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleGoogleLogin = () => {
+    // Redirect user to your backend Google auth route
+    window.location.href = `${BASE_URL}/auth/google/callback`;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setShow(true);
+    setLoading(true);
+    try {
+      const res = await axios.post(`${BASE_URL}/api/auth/login`, form);
+
+      login(res.data.user, res.data.token);
+
+      // success notification
+      setNotification({
+        title: "Login Successful 🎉",
+        message: "Welcome back! Redirecting to dashboard...",
+        type: "success",
+        link: "/dashboard",
+        linkText: "Go to Dashboard",
+      });
+    } catch (error) {
+      console.error(error);
+
+      // error notification
+      setNotification({
+        title: "Login Failed ❌",
+        message: error.response?.data?.message || "Something went wrong. Please try again.",
+        type: "error",
+        linkText: "ok",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex w-full min-h-screen">
-      {show && (
+      {/* Notification */}
+      {notification && (
         <Notification
-          title="Account Created!"
-          message="Your account has been successfully created."
-          link="/dashboard"
-          linkText="Go to dashboard"
-          onClose={() => setShow(false)}
+          title={notification.title}
+          message={notification.message}
+          link={notification.link}
+          linkText={notification.linkText}
+          type={notification.type}
+          onClose={() => setNotification(null)}
         />
       )}
 
       {/* Left side - form */}
       <div className="flex flex-1 justify-center items-center py-10">
-        <form className="flex flex-col justify-center items-center p-10 border border-primary rounded-[20px] shadow-md w-[400px]">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col justify-center items-center p-10 border border-primary rounded-[20px] shadow-md w-[400px]"
+        >
           <div className="text-left flex flex-col gap-4 my-4 w-full">
             <img src="/logo.png" alt="register" className="w-20 h-20" />
             <h1 className="text-3xl font-bold">
               Welcome back <span className="inline-block">👋</span>
             </h1>
-            <p className="text-gray-500 text-sm">Please enter your email & password to sign in.</p>
+            <p className="text-gray-500 text-sm">
+              Please enter your email & password to sign in.
+            </p>
           </div>
 
           {/* Email */}
@@ -53,10 +96,14 @@ const Login = () => {
               name="email"
               placeholder="Email"
               onChange={handleChange}
+              required
               className="outline-none w-full bg-transparent"
             />
           </div>
-          <Link to="/forget-password" className="self-end text-sm text-primary mb-2">
+          <Link
+            to="/forget-password"
+            className="self-end text-sm text-primary mb-2"
+          >
             Forgot Password?
           </Link>
 
@@ -69,6 +116,7 @@ const Login = () => {
               name="password"
               onChange={handleChange}
               placeholder="Password"
+              required
               className="outline-none w-full bg-transparent"
             />
             <span
@@ -82,22 +130,35 @@ const Login = () => {
             </span>
           </div>
 
-          {/* Register button */}
-          <button className="bg-primary text-white rounded-full p-2 w-full my-2" onClick={handleSubmit}>
-            Signin
+          {/* signin button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-primary text-white rounded-full p-2 w-full my-2"
+          >
+            {loading ? "Signing in..." : "Sign in"}
           </button>
 
           {/* Or sign up with Google */}
-          <button className="flex items-center justify-center border border-gray-100 rounded-full p-2 w-full my-2 hover:bg-gray-100 transition">
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="flex items-center justify-center border border-gray-100 rounded-full p-2 w-full my-2 hover:bg-gray-100 transition"
+          >
             <FaGoogle className="text-red-500 mr-2" />
             Sign up with Google
           </button>
 
-          <p className="text-sm">Don't have an account? <Link to="/" className="text-primary">sign up</Link></p>
+          <p className="text-sm">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-primary">
+              Sign up
+            </Link>
+          </p>
         </form>
       </div>
 
-      {/* Right side - image (hidden below md) */}
+      {/* Right side - image */}
       <div
         className="hidden md:block w-1/2 h-screen"
         style={{
@@ -113,10 +174,8 @@ const Login = () => {
           src="/signin.png"
           alt="register"
           className="w-full h-full object-cover"
-          style={{ objectFit: "cover", width: "100%", height: "100%" }}
         />
       </div>
-      {/* Add padding to left side to prevent overlap on md+ */}
       <div className="hidden md:block" style={{ width: "50vw" }}></div>
     </div>
   );

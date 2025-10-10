@@ -1,35 +1,26 @@
 import React, { useState } from "react";
-import { FaSearch } from "react-icons/fa"; // <-- Add this import
+import { FaSearch } from "react-icons/fa";
 
 const options = [
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
-  { label: "Heavy ⚡", value: "Heavy" },
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
-  { label: "Heavy ⚡", value: "Heavy" },
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
-  { label: "Heavy ⚡", value: "Heavy" },
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
+  { label: "Smoker 🚬", value: "Smoker" },
+  { label: "Non-smoker 🚭", value: "NonSmoker" },
+  { label: "Drinks 🍷", value: "Drinks" },
   { label: "Heavy ⚡", value: "Heavy" },
 ];
 
-const HealthSection = () => {
+const HealthSection = ({ value, onChange }) => {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
 
-  const toggleSelect = (value) => {
-    if (selected.includes(value)) {
-      setSelected(selected.filter((item) => item !== value)); // remove if already selected
+  const toggleSelect = (val) => {
+    let newSelected;
+    if (selected.includes(val)) {
+      newSelected = selected.filter((item) => item !== val);
     } else {
-      setSelected([...selected, value]); // add new selection
+      newSelected = [...selected, val];
     }
+    setSelected(newSelected);
+    if (onChange) onChange(newSelected); // propagate to parent
   };
 
   const filteredOptions = options.filter((opt) =>
@@ -40,7 +31,7 @@ const HealthSection = () => {
     <div className="text-center">
       <h1 className="text-xl font-bold mb-2">Your health info 🩺</h1>
       <p className="text-gray-600 mb-4">
-        Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+        Select your health lifestyle choices. This info is private and helps personalize your experience.
       </p>
 
       {/* Search Bar with Icon */}

@@ -1,8 +1,13 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import StickerCard from "../components/dashboard/home/StickerCard";
 import MatchCard from "../components/dashboard/home/MatchCard";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import axios from "axios";
+import { BASE_URL } from "../config/url";
+import { useAuth } from "../context/authContext";
+import Loader from './../components/common/Loader';
+
 
 const data = [
   {
@@ -63,6 +68,32 @@ const matchData = [
 ];
 
 const Home = () => {
+  const [matches, setMatches] = useState(data);
+  const [loading, setLoading] = useState(true);
+  const {user} = useAuth();
+
+  const fetch = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/api/user-dashboard/get/${user._id}`);
+      setMatches(res.data);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    } 
+  }
+
+
+  useEffect(() => {
+    fetch();
+  }, []);
+
+
+  if(loading) return <Loader />
+  
+
+
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 md:grid-cols-2  gap-6">
@@ -84,7 +115,7 @@ const Home = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5  gap-6">
-          {matchData.map((item) => (
+          {matches.map((item) => (
             <MatchCard item={item} key={item.id} />
           ))}
         </div>

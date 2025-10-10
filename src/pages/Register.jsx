@@ -3,9 +3,12 @@ import { FaEnvelope, FaLock, FaPhoneAlt, FaGoogle, FaEye } from "react-icons/fa"
 import { LuEyeClosed } from "react-icons/lu";
 import { Link } from "react-router-dom";
 import Notification from "../components/common/Notification";
+import { BASE_URL } from './../config/url';
+import axios from "axios";
 
 const Register = () => {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(false); // success notification
+  const [error, setError] = useState(null); // error notification
   const [form, setForm] = useState({
     email: "",
     phone: "",
@@ -14,30 +17,73 @@ const Register = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setShow(true);
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Step 1: Send OTP to email
+      const res = await axios.post(`${BASE_URL}/api/otp/send`, {
+        email: form.email,
+        registration: true,
+      });
+
+      console.log("OTP sent:", res.data);
+
+      // Step 2: Save user data temporarily
+      localStorage.setItem("pendingUser", JSON.stringify(form));
+
+      // Step 3: Show success notification → go to verification page
+      setShow(true);
+    } catch (err) {
+      console.error(err);
+      localStorage.setItem("pendingUser", JSON.stringify(form));
+      setError(err.response?.data?.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex w-full min-h-screen">
+      {/* Success Notification */}
       {show && (
         <Notification
           title="Verify Your Email"
           message="A verification pin has been sent to your email."
           link="/email-verification"
-          linkText="continue"
+          linkText="Continue"
           onClose={() => setShow(false)}
         />
       )}
+
+      {/* Error Notification */}
+      {error && (
+        <Notification
+          title="Error"
+          message={error}
+          onClose={() => setError(null)}
+          linkText="ok"
+        />
+      )}
+
       {/* Left side - form */}
       <div className="flex flex-1 justify-center items-center py-10">
-        <form onSubmit={handleSubmit} className="flex flex-col justify-center items-center p-10 border border-primary rounded-[20px] shadow-md w-[400px]">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col justify-center items-center p-10 border border-primary rounded-[20px] shadow-md w-[400px]"
+        >
           <div className="text-left flex flex-col gap-4 my-4 w-full">
             <img src="/logo.png" alt="register" className="w-20 h-20" />
             <h1 className="text-3xl font-bold">Create an Account</h1>
@@ -57,6 +103,7 @@ const Register = () => {
               placeholder="Email"
               onChange={handleChange}
               className="outline-none w-full bg-transparent"
+              required
             />
           </div>
 
@@ -70,6 +117,7 @@ const Register = () => {
               placeholder="Phone"
               onChange={handleChange}
               className="outline-none w-full bg-transparent"
+              required
             />
           </div>
 
@@ -83,6 +131,7 @@ const Register = () => {
               placeholder="Password"
               onChange={handleChange}
               className="outline-none w-full bg-transparent"
+              required
             />
             <span
               className="absolute right-3 cursor-pointer text-gray-400"
@@ -107,21 +156,27 @@ const Register = () => {
               placeholder="Confirm Password"
               onChange={handleChange}
               className="outline-none w-full bg-transparent"
+              required
             />
             <span
               className="absolute right-3 cursor-pointer text-gray-400"
               onClick={() => setShowConfirmPassword((prev) => !prev)}
               tabIndex={0}
               role="button"
-              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              aria-label={
+                showConfirmPassword ? "Hide password" : "Show password"
+              }
             >
               {!showConfirmPassword ? <LuEyeClosed /> : <FaEye />}
             </span>
           </div>
 
           {/* Register button */}
-          <button className="bg-primary text-white rounded-full p-2 w-full my-2">
-            Register
+          <button
+            disabled={loading}
+            className="bg-primary text-white rounded-full p-2 w-full my-2"
+          >
+            {loading ? "Sending OTP..." : "Register"}
           </button>
 
           {/* Or sign up with Google */}
@@ -133,7 +188,7 @@ const Register = () => {
           <p className="text-sm">
             Already have an account?{" "}
             <Link to="/login" className="text-primary">
-              signin
+              Sign in
             </Link>
           </p>
         </form>

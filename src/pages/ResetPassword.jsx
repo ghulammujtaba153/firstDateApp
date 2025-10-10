@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { FaArrowLeft, FaLock, FaEye, FaGoogle } from "react-icons/fa";
 import { LuEyeClosed } from "react-icons/lu";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Notification from "../components/common/Notification";
+import axios from "axios";
+import { BASE_URL } from "../config/url";
 
 const ResetPassword = () => {
   const [show, setShow] = useState(false);
@@ -12,19 +14,26 @@ const ResetPassword = () => {
     password: "",
     confirmPassword: "",
   });
+  const location = useLocation();
+  const email = location.state?.email || "";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
+
+    const res = await axios.put(`${BASE_URL}/api/auth/reset-password`, {
+      email,
+      password: formData.password,
+    });
 
     // 👉 Call your reset password API here
     console.log("Reset password request:", formData);

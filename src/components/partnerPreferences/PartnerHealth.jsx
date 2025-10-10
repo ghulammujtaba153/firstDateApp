@@ -1,35 +1,24 @@
 import React, { useState } from "react";
-import { FaSearch } from "react-icons/fa"; // <-- Add this import
+import { FaSearch } from "react-icons/fa";
 
 const options = [
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
-  { label: "Heavy ⚡", value: "Heavy" },
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
-  { label: "Heavy ⚡", value: "Heavy" },
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
-  { label: "Heavy ⚡", value: "Heavy" },
-  { label: "Smoker 🚬", value: "Slim" },
-  { label: "Non smoker 🚭", value: "Athletic" },
-  { label: "Drinks 🍷", value: "Average" },
+  { label: "Smoker 🚬", value: "Smoker" },
+  { label: "Non smoker 🚭", value: "NonSmoker" },
+  { label: "Drinks 🍷", value: "Drinks" },
   { label: "Heavy ⚡", value: "Heavy" },
 ];
 
-const PartnerHealth = () => {
-  const [selected, setSelected] = useState([]);
+const PartnerHealth = ({ form, setForm }) => {
   const [search, setSearch] = useState("");
 
   const toggleSelect = (value) => {
-    if (selected.includes(value)) {
-      setSelected(selected.filter((item) => item !== value)); // remove if already selected
+    let updated;
+    if (form.partnerHealth.includes(value)) {
+      updated = form.partnerHealth.filter((item) => item !== value);
     } else {
-      setSelected([...selected, value]); // add new selection
+      updated = [...form.partnerHealth, value];
     }
+    setForm({ ...form, partnerHealth: updated });
   };
 
   const filteredOptions = options.filter((opt) =>
@@ -40,10 +29,10 @@ const PartnerHealth = () => {
     <div className="text-center">
       <div className="my-4 text-left">
         <h1 className="text-xl font-bold mb-2">Partner health info 🩺</h1>
-      <p className="text-gray-600 mb-4">
-        Lorem Ipsum is simply dummy text of the printing and typesetting industry.
-      </p>
-        </div>
+        <p className="text-gray-600 mb-4">
+          Select lifestyle & health preferences for your partner.
+        </p>
+      </div>
 
       {/* Search Bar with Icon */}
       <div className="relative w-full max-w-md mx-auto mb-4">
@@ -66,7 +55,7 @@ const PartnerHealth = () => {
             key={option.value}
             onClick={() => toggleSelect(option.value)}
             className={`px-4 py-2 rounded-full border transition ${
-              selected.includes(option.value)
+              form.partnerHealth.includes(option.value)
                 ? "bg-primary/10 text-primary border-primary"
                 : "border-gray-300 text-gray-700 hover:bg-gray-100"
             }`}
@@ -79,7 +68,4 @@ const PartnerHealth = () => {
   );
 };
 
-
-
-
-export default PartnerHealth
+export default PartnerHealth;

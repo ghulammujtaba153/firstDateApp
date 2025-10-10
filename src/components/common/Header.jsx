@@ -1,8 +1,13 @@
 import React, { useState } from "react";
-import { FaSearch, FaBell, FaCommentDots, FaUser, FaSignOutAlt } from "react-icons/fa";
+import { FaSearch, FaBell, FaCommentDots, FaUser, FaSignOutAlt, FaCheck, FaCross } from "react-icons/fa";
+import { VscVerifiedFilled } from "react-icons/vsc";
+import { useAuth } from "../../context/authContext";
 
 const Header = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { user } = useAuth();
+
+  console.log("user in header",user);
 
   return (
     <header className="w-full h-16 bg-white shadow flex items-center justify-between px-6 relative">
@@ -46,7 +51,7 @@ const Header = () => {
 
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50">
-              <p className="px-4 py-2 text-gray-700 font-semibold">Hello, User</p>
+              <p className="px-4 py-2 text-gray-700 font-semibold">Hello, {user.username} {user.verified ? <VscVerifiedFilled /> : ""}</p>
               <hr />
               <button className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600">
                 <FaUser /> Profile

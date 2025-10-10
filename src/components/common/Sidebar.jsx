@@ -12,9 +12,15 @@ import {
 } from "react-icons/fa";
 import { TfiStar } from "react-icons/tfi";
 import { MdOutlinePrivacyTip } from "react-icons/md";
+import { useAuth } from "../../context/authContext";
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
+  const { logout } = useAuth();
+
+
+
+
 
   const menuItems = [
     { name: "Dashboard", icon: <FaTachometerAlt />, path: "/dashboard" },
@@ -25,7 +31,7 @@ const Sidebar = () => {
     { name: "Profile", icon: <FaUser />, path: "/dashboard/profile" },
     { name: "Settings", icon: <FaCog />, path: "/dashboard/settings" },
     { name: "Privacy Policy", icon: <MdOutlinePrivacyTip />, path: "/dashboard/privacy-policy" },
-    { name: "Logout", icon: <FaSignOutAlt />, path: "/logout" },
+    // { name: "Logout", icon: <FaSignOutAlt />, path: "" },
   ];
 
   return (
@@ -69,7 +75,15 @@ const Sidebar = () => {
               </li>
             ))}
           </ul>
+
+          <button onClick={logout} className="flex items-center gap-3 px-4 py-3 rounded-full transition-colors duration-200 hover:bg-gray-100 hover:text-primary">
+            <FaSignOutAlt />
+            <p>logout</p>
+          </button>
+
         </div>
+
+        
       </div>
 
       {/* Overlay for mobile */}

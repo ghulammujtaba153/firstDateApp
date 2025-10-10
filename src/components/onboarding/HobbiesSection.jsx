@@ -1,38 +1,39 @@
-import React, { useState } from "react";
-import { FaSearch } from "react-icons/fa"; // <-- Add this import
+import React, { useState, useEffect } from "react";
+import { FaSearch } from "react-icons/fa";
 
 const options = [
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
-  { label: "Chubby", value: "Chubby" },
-  { label: "Travel ✈️", value: "Slim" },
-  { label: "Sports ⚽", value: "Athletic" },
-  { label: "Reading 📚", value: "Average" },
-  { label: "Music 🎵", value: "Heavy" },
-  { label: "Movies 🎬", value: "Lean" },
-  { label: "Foodie 🍕", value: "Fit" },
+  { label: "Travel ✈️", value: "travel" },
+  { label: "Sports ⚽", value: "sports" },
+  { label: "Reading 📚", value: "reading" },
+  { label: "Music 🎵", value: "music" },
+  { label: "Movies 🎬", value: "movies" },
+  { label: "Foodie 🍕", value: "foodie" },
+  { label: "Photography 📸", value: "photography" },
+  { label: "Gaming 🎮", value: "gaming" },
+  { label: "Fitness 🏋️", value: "fitness" },
+  { label: "Art 🎨", value: "art" },
+  { label: "Dancing 💃", value: "dancing" },
+  { label: "Cooking 👩‍🍳", value: "cooking" },
 ];
 
-const HoobiesSection = () => {
-  const [selected, setSelected] = useState([]);
+const HoobiesSection = ({ value = [], onChange }) => {
+  const [selected, setSelected] = useState(value);
   const [search, setSearch] = useState("");
 
-  const toggleSelect = (value) => {
-    if (selected.includes(value)) {
-      setSelected(selected.filter((item) => item !== value)); // remove if already selected
+  // Sync when parent updates
+  useEffect(() => {
+    setSelected(value);
+  }, [value]);
+
+  const toggleSelect = (val) => {
+    let updated;
+    if (selected.includes(val)) {
+      updated = selected.filter((item) => item !== val);
     } else {
-      setSelected([...selected, value]); // add new selection
+      updated = [...selected, val];
     }
+    setSelected(updated);
+    if (onChange) onChange(updated); // pass up
   };
 
   const filteredOptions = options.filter((opt) =>
@@ -44,25 +45,25 @@ const HoobiesSection = () => {
       <div className="my-4 text-left">
         <h1 className="text-xl font-bold mb-2">Lifestyle & hobbies 🎧</h1>
         <p className="text-gray-600 mb-4">
-          Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+          Select hobbies that best describe you. Others won’t see exact choices.
         </p>
       </div>
 
-      {/* Search Bar with Icon */}
+      {/* Search Bar */}
       <div className="relative w-full max-w-md mx-auto mb-4">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
           <FaSearch />
         </span>
         <input
           type="text"
-          placeholder="Search body type..."
+          placeholder="Search hobbies..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:outline-none"
         />
       </div>
 
-      {/* Options Grid */}
+      {/* Options */}
       <div className="flex flex-wrap gap-3 justify-left">
         {filteredOptions.map((option) => (
           <button
@@ -78,11 +79,6 @@ const HoobiesSection = () => {
           </button>
         ))}
       </div>
-
-      {/* Debug: Show selected values */}
-      {/* <div className="mt-4 text-sm text-gray-600">
-        Selected: {selected.length > 0 ? selected.join(", ") : "None"}
-      </div> */}
     </div>
   );
 };
