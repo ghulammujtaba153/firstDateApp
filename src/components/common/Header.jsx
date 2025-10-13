@@ -5,9 +5,14 @@ import { useAuth } from "../../context/authContext";
 
 const Header = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   console.log("user in header",user);
+
+  const handleLogout = () => {
+    logout();
+    setDropdownOpen(false);
+  }
 
   return (
     <header className="w-full h-16 bg-white shadow flex items-center justify-between px-6 relative">
@@ -56,7 +61,7 @@ const Header = () => {
               <button className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600">
                 <FaUser /> Profile
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600">
+              <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600">
                 <FaSignOutAlt /> Logout
               </button>
             </div>

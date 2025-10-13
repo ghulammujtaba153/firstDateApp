@@ -14,7 +14,7 @@ import { useAuth } from "../context/authContext";
 const PartnerPreferences = () => {
   const [show, setShow] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   const [form, setForm] = useState({
     partnerAge: { min: 18, max: 30 },
@@ -30,7 +30,8 @@ const PartnerPreferences = () => {
 
   const handleSubmit = async () => {
     try {
-      await axios.put(`${BASE_URL}/api/auth/onboarding/${user._id}`, form);
+      const res = await axios.put(`${BASE_URL}/api/auth/onboarding/${user._id}`, form);
+      setUser(res.data);
       setShow(true);
       console.log("✅ Preferences saved:", form);
     } catch (error) {

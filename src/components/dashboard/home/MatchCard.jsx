@@ -1,9 +1,7 @@
 import React, { useState } from 'react'
 import { TiTick } from "react-icons/ti";
-import { FaUser, FaUserCircle, FaRegUserCircle, FaUserAlt } from "react-icons/fa";
-import { IoPersonCircle } from "react-icons/io5";
-
-const MatchCard = ({ item }) => {
+import { FaUser } from "react-icons/fa";
+const MatchCard = ({ item, userLocation }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
 
@@ -26,6 +24,45 @@ const MatchCard = ({ item }) => {
     ];
     const index = getUserInitial().charCodeAt(0) % colors.length;
     return colors[index];
+  };
+
+  // Calculate distance using Haversine formula
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    
+    return distance.toFixed(1);
+  };
+
+  // Get distance text
+  const getDistanceText = () => {
+    // If match has location object
+    if (item.location && item.location.latitude && item.location.longitude) {
+      // If user location is provided, calculate distance
+      if (userLocation && userLocation.latitude && userLocation.longitude) {
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          item.location.latitude,
+          item.location.longitude
+        );
+        return `${distance} km away`;
+      }
+      // If no user location, just show coordinates (fallback)
+      return `${item.location.latitude.toFixed(2)}°, ${item.location.longitude.toFixed(2)}°`;
+    }
+    
+    // Fallback to item.distance if available
+    return item.distance || "Location unknown";
   };
 
   const AvatarPlaceholder = () => (
@@ -66,12 +103,12 @@ const MatchCard = ({ item }) => {
       {/* Content on top of image */}
       <div className="absolute bottom-4 left-4 text-white drop-shadow-lg">
         <h3 className="text-lg font-semibold flex items-center gap-1">
-          {item.username || "Unknown User"} 
+          {item.username || "Unknown User"}
           {item.verified && (
             <TiTick className="text-primary bg-white rounded-full text-sm p-0.5" />
           )}
         </h3>
-        <p className="text-sm">{item.distance || "Location unknown"}</p>
+        <p className="text-sm">{getDistanceText()}</p>
       </div>
 
       {/* Hover effect */}
@@ -80,4 +117,4 @@ const MatchCard = ({ item }) => {
   )
 }
 
-export default MatchCard
+export default MatchCard;
