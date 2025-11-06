@@ -1,9 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { TiTick } from "react-icons/ti";
 import { FaUser } from "react-icons/fa";
 const MatchCard = ({ item, userLocation }) => {
+  const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [locationName, setLocationName] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   // Get user initial for avatar
   const getUserInitial = () => {
@@ -43,6 +47,84 @@ const MatchCard = ({ item, userLocation }) => {
     return distance.toFixed(1);
   };
 
+  // Reverse geocode coordinates to get city/town name
+  const reverseGeocode = async (latitude, longitude) => {
+    // Check if we already have this location cached
+    const cacheKey = `${latitude.toFixed(4)}_${longitude.toFixed(4)}`;
+    const cached = sessionStorage.getItem(`location_${cacheKey}`);
+    
+    if (cached) {
+      setLocationName(cached);
+      return;
+    }
+
+    try {
+      setLocationLoading(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'FirstDateApp/1.0' // Required by Nominatim
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Geocoding failed');
+      }
+      
+      const data = await response.json();
+      
+      // Extract city/town name from address
+      const address = data.address;
+      let locationText = '';
+      
+      if (address.city) {
+        locationText = address.city;
+      } else if (address.town) {
+        locationText = address.town;
+      } else if (address.village) {
+        locationText = address.village;
+      } else if (address.municipality) {
+        locationText = address.municipality;
+      } else if (address.county) {
+        locationText = address.county;
+      } else if (address.state) {
+        locationText = address.state;
+      } else if (address.country) {
+        locationText = address.country;
+      }
+      
+      // If we have city/town, optionally add state/country for context
+      if (locationText && address.state && locationText !== address.state) {
+        locationText = `${locationText}, ${address.state}`;
+      } else if (locationText && address.country && !address.state) {
+        locationText = `${locationText}, ${address.country}`;
+      }
+      
+      const finalLocation = locationText || 'Unknown location';
+      setLocationName(finalLocation);
+      
+      // Cache the result
+      sessionStorage.setItem(`location_${cacheKey}`, finalLocation);
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      setLocationName(null); // Fallback to coordinates
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  // Fetch location name when coordinates are available
+  useEffect(() => {
+    if (item.location && item.location.latitude && item.location.longitude) {
+      // Only fetch if user location is not provided (so we need to show location name)
+      if (!userLocation || !userLocation.latitude || !userLocation.longitude) {
+        reverseGeocode(item.location.latitude, item.location.longitude);
+      }
+    }
+  }, [item.location, userLocation]);
+
   // Get distance text
   const getDistanceText = () => {
     // If match has location object
@@ -57,7 +139,15 @@ const MatchCard = ({ item, userLocation }) => {
         );
         return `${distance} km away`;
       }
-      // If no user location, just show coordinates (fallback)
+      
+      // If no user location, show city/town name or coordinates as fallback
+      if (locationLoading) {
+        return 'Loading location...';
+      }
+      if (locationName) {
+        return locationName;
+      }
+      // Fallback to coordinates if geocoding failed
       return `${item.location.latitude.toFixed(2)}°, ${item.location.longitude.toFixed(2)}°`;
     }
     
@@ -74,8 +164,18 @@ const MatchCard = ({ item, userLocation }) => {
     </div>
   );
 
+  const handleCardClick = () => {
+    const matchId = item.id || item._id;
+    if (matchId) {
+      navigate(`/dashboard/matches/${matchId}`);
+    }
+  };
+
   return (
-    <div className="relative w-full h-60 rounded-[30px] overflow-hidden shadow group cursor-pointer">
+    <div 
+      className="relative w-full h-60 rounded-[30px] overflow-hidden shadow group cursor-pointer"
+      onClick={handleCardClick}
+    >
       {/* Background Image or Icon Avatar */}
       {item.avatar && !imageError ? (
         <>

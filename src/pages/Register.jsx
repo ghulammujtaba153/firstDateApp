@@ -23,6 +23,11 @@ const Register = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleGoogleSignup = () => {
+    // Redirect user to backend Google auth route
+    window.location.href = `${BASE_URL}/auth/google/callback`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -180,7 +185,11 @@ const Register = () => {
           </button>
 
           {/* Or sign up with Google */}
-          <button className="flex items-center justify-center border border-gray-200 rounded-full p-2 w-full my-2 hover:bg-gray-100 transition">
+          <button 
+            type="button"
+            onClick={handleGoogleSignup}
+            className="flex items-center justify-center border border-gray-200 rounded-full p-2 w-full my-2 hover:bg-gray-100 transition"
+          >
             <FaGoogle className="text-red-500 mr-2" />
             Sign up with Google
           </button>

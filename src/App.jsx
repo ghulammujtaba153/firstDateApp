@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 import DashboardLayout from "./layout/DashboardLayout";
 import PrivacyPolicy from "./pages/dashboard/PrivacyPolicy";
 import Matches from "./pages/dashboard/Matches";
+import MatchDetail from "./pages/dashboard/MatchDetail";
 import Events from "./pages/dashboard/Events";
 import Settings from "./pages/dashboard/Settings";
 import Profile from "./pages/dashboard/Profile";
@@ -29,6 +30,7 @@ import ProtectedRoute from "./components/ProtectedRoutes";
 import UserRoutes from "./components/UserRoutes";
 import GoogleAuth from "./pages/GoogleAuth";
 import FreeScreenProtectedRoutes from "./components/FreeScreenProtectedRoutes";
+import FaceTryVerification from "./pages/FaceTryVerification";
 
 function App() {
   return (
@@ -38,6 +40,7 @@ function App() {
 
         <Route path="/" element={<UserRoutes />} />
         <Route path="/verification" element={<FaceVerification />} />
+        <Route path="/try-verification" element={<FaceTryVerification />} />
 
         {/* Onboarding routes - accessible to authenticated users who haven't completed onboarding */}
         <Route path="/onboarding" element={<OnBoarding />} />
@@ -112,6 +115,15 @@ function App() {
             element={
               <DashboardLayout>
                 <Matches />
+              </DashboardLayout>
+            }
+          />
+
+          <Route
+            path="/dashboard/matches/:id"
+            element={
+              <DashboardLayout>
+                <MatchDetail />
               </DashboardLayout>
             }
           />
