@@ -2,10 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import AgoraRTC from "agora-rtc-sdk-ng";
+import { BASE_URL } from "../../../config/url";
+import axios from "axios";
 
-const APP_ID = "c905455f70de484ca552c6d1cb4564ba"; // 🔑 Replace with your Agora App ID
-const TOKEN_ENDPOINT =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const APP_ID = import.meta.env.VITE_AGORA_APP_ID;
+const TOKEN_ENDPOINT = `${BASE_URL}/generate-token`;
 
 const VideoCallPage = () => {
   const location = useLocation();
@@ -41,55 +42,65 @@ const VideoCallPage = () => {
       try {
         setConnectionStatus("connecting");
 
-        // Create mic + camera tracks FIRST (before joining)
-        console.log("📹 Creating local tracks...");
-        const [micTrack, camTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-          { echoCancellation: true },
-          { 
-            width: 640, 
-            height: 480, 
-            frameRate: 15
-          }
-        );
+        if (!APP_ID) {
+          throw new Error("Agora APP_ID is missing. Please set VITE_AGORA_APP_ID in your .env file.");
+        }
+
+        const callType = callData?.callType || 'video'; // 'audio' or 'video'
+        
+        // Create tracks based on call type
+        console.log(`Creating ${callType} call tracks...`);
+        let micTrack, camTrack;
+        
+        if (callType === 'audio') {
+          // Audio-only call
+          micTrack = await AgoraRTC.createMicrophoneAudioTrack({ echoCancellation: true });
+          camTrack = null;
+          setTracksReady(true);
+        } else {
+          // Video call
+          [micTrack, camTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+            { echoCancellation: true },
+            { 
+              width: 640, 
+              height: 480, 
+              frameRate: 15
+            }
+          );
+          setTracksReady(true);
+        }
 
         localTracks.current = { mic: micTrack, cam: camTrack };
         console.log("🎤 Mic Track:", micTrack);
-        console.log("📹 Cam Track:", camTrack);
-        console.log("📹 Cam Track enabled:", camTrack.enabled);
-        console.log("📹 Cam Track muted:", camTrack.muted);
+        if (camTrack) console.log("📹 Cam Track:", camTrack);
 
-        // Set tracks ready - this will trigger the UI to render
-        setTracksReady(true);
-        
-        // DON'T play here - wait for UI to render first
-
-        // Fetch fresh token
-        const tokenResponse = await fetch(`${TOKEN_ENDPOINT}/generate-token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        // Use token from callData if available, otherwise fetch new one
+        let tokenData;
+        if (callData.token && callData.channelName && callData.uid) {
+          // Use existing token
+          tokenData = {
+            token: callData.token,
+            channelName: callData.channelName,
+            uid: callData.uid
+          };
+          console.log("✅ Using provided token");
+        } else {
+          // Fetch new token from server
+          const tokenResponse = await axios.post(TOKEN_ENDPOINT, {
             channelName: callData.channelName,
             uid: callData.uid,
-          }),
-        });
-
-        if (!tokenResponse.ok) {
-          throw new Error(`Token generation failed: ${tokenResponse.status}`);
-        }
-
-        const tokenData = await tokenResponse.json();
-        console.log("✅ Token received:", tokenData);
-
-        if (!APP_ID) {
-          throw new Error("Agora APP_ID is missing");
+          });
+          tokenData = tokenResponse.data;
+          console.log("✅ Token received from server:", tokenData);
         }
 
         // Join Agora channel
+        const numericUid = typeof tokenData.uid === 'string' ? parseInt(tokenData.uid) : tokenData.uid;
         await clientRef.current.join(
           APP_ID,
           tokenData.channelName,
           tokenData.token,
-          tokenData.uid
+          numericUid
         );
 
         joinedRef.current = true;
@@ -97,7 +108,8 @@ const VideoCallPage = () => {
         console.log("🎉 Joined channel:", tokenData.channelName);
 
         // Publish local tracks
-        await clientRef.current.publish([micTrack, camTrack]);
+        const tracksToPublish = camTrack ? [micTrack, camTrack] : [micTrack];
+        await clientRef.current.publish(tracksToPublish);
         console.log("📤 Published local tracks");
 
         // Handle remote users
@@ -219,24 +231,47 @@ const VideoCallPage = () => {
         await clientRef.current.leave();
         joinedRef.current = false;
       }
-      navigate("/");
+      // Navigate back to chats
+      navigate("/chats");
     } catch (error) {
       console.error("Leave call error:", error);
-      navigate("/");
+      navigate("/chats");
     }
   };
 
   // --- UI ---
   if (!callData) {
-    return <div className="text-white p-4">No call data found</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+        <div className="text-center">
+          <p className="text-xl mb-4">No call data found</p>
+          <button
+            onClick={() => navigate('/chats')}
+            className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+          >
+            Go Back to Chats
+          </button>
+        </div>
+      </div>
+    );
   }
+
+  const callType = callData?.callType || 'video';
+  const otherParticipant = callData?.otherParticipant;
 
   // Show UI even while connecting, so video containers are available
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-900 text-white p-4">
-      <h1 className="text-xl font-bold mb-4">
-        📹 Channel: {callData.channelName}
-      </h1>
+      <div className="flex items-center justify-between w-full max-w-6xl mb-4">
+        <h1 className="text-xl font-bold">
+          {callType === 'video' ? '📹 Video' : '📞 Audio'} Call
+        </h1>
+        {otherParticipant && (
+          <p className="text-lg text-gray-300">
+            {otherParticipant.username || 'Unknown User'}
+          </p>
+        )}
+      </div>
 
       {connectionStatus === "connecting" && !tracksReady && (
         <div className="text-yellow-400 mb-4">🔄 Connecting to call...</div>
@@ -255,22 +290,41 @@ const VideoCallPage = () => {
       )}
 
       <div className="flex flex-wrap justify-center gap-6 mb-6">
-        {/* Local Video */}
-        <div className="flex flex-col items-center">
-          <div
-            ref={localVideoRef}
-            className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden relative"
-          />
-          <p className="text-sm text-gray-400 mt-2">You</p>
-        </div>
+        {/* Local Video/Audio */}
+        {callType === 'video' && (
+          <div className="flex flex-col items-center">
+            <div
+              ref={localVideoRef}
+              className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden relative"
+            />
+            <p className="text-sm text-gray-400 mt-2">You</p>
+          </div>
+        )}
 
-        {/* Remote Video */}
+        {/* Remote Video/Audio */}
         <div className="flex flex-col items-center">
-          <div
-            ref={remoteVideoRef}
-            className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-gray-600 overflow-hidden relative"
-          />
-          <p className="text-sm text-gray-400 mt-2">Remote User</p>
+          {callType === 'video' ? (
+            <div
+              ref={remoteVideoRef}
+              className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-gray-600 overflow-hidden relative flex items-center justify-center"
+            >
+              {!tracksReady && (
+                <p className="text-gray-400">Waiting for remote video...</p>
+              )}
+            </div>
+          ) : (
+            <div className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-gray-600 overflow-hidden relative flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-4xl">📞</span>
+                </div>
+                <p className="text-gray-400">Audio Call</p>
+              </div>
+            </div>
+          )}
+          <p className="text-sm text-gray-400 mt-2">
+            {otherParticipant?.username || 'Remote User'}
+          </p>
         </div>
       </div>
 
@@ -282,12 +336,14 @@ const VideoCallPage = () => {
         >
           {micEnabled ? "🎤 Mic On" : "🔇 Mic Off"}
         </button>
-        <button
-          onClick={toggleCamera}
-          className={`px-4 py-2 rounded ${cameraEnabled ? 'bg-blue-600' : 'bg-gray-600'}`}
-        >
-          {cameraEnabled ? "📹 Camera On" : "📷 Camera Off"}
-        </button>
+        {callType === 'video' && (
+          <button
+            onClick={toggleCamera}
+            className={`px-4 py-2 rounded ${cameraEnabled ? 'bg-blue-600' : 'bg-gray-600'}`}
+          >
+            {cameraEnabled ? "📹 Camera On" : "📷 Camera Off"}
+          </button>
+        )}
         <button onClick={leaveCall} className="px-4 py-2 bg-red-600 rounded hover:bg-red-700">
           📞 Leave
         </button>

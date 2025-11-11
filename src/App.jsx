@@ -10,7 +10,7 @@ import ForgetPassword from "./pages/ForgetPassword";
 import OTP from "./pages/OTP";
 import ResetPassword from "./pages/ResetPassword";
 import DashboardLayout from "./layout/DashboardLayout";
-import PrivacyPolicy from "./pages/dashboard/PrivacyPolicy";
+import Privacy from "./pages/dashboard/Privacy";
 import Matches from "./pages/dashboard/Matches";
 import MatchDetail from "./pages/dashboard/MatchDetail";
 import Events from "./pages/dashboard/Events";
@@ -105,7 +105,7 @@ function App() {
             path="/dashboard/privacy-policy"
             element={
               <DashboardLayout>
-                <PrivacyPolicy />
+                <Privacy />
               </DashboardLayout>
             }
           />

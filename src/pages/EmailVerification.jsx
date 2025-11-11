@@ -87,6 +87,7 @@ const EmailVerification = () => {
     try {
       const res = await axios.post(`${BASE_URL}/api/otp/send`, {
         email: pendingUser.email,
+        registration: true,
       });
       console.log("Resent OTP:", res.data);
       alert("OTP resent to your email.");

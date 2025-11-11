@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import Sidebar from '../../components/dashboard/chats/Sidebar'
 import ChatContainer from '../../components/dashboard/chats/ChatContainer'
 import { useAuth } from '../../context/authContext'
+import { useSocket } from '../../context/socketContext'
 import { BASE_URL } from '../../config/url'
 import axios from 'axios'
 import Loader from '../../components/common/Loader'
@@ -10,10 +11,10 @@ import Loader from '../../components/common/Loader'
 const Chats = () => {
   const location = useLocation()
   const { user: currentUser } = useAuth()
+  const { onlineUsers } = useSocket()
   const [chats, setChats] = useState([])
   const [selectedChat, setSelectedChat] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -48,11 +49,35 @@ const Chats = () => {
     }
 
     fetchChats()
-  }, [currentUser?._id, location.state, refreshKey])
+  }, [currentUser?._id, location.state])
 
-  const refreshChats = () => {
-    setRefreshKey(prev => prev + 1)
-  }
+  // Online status is now handled by Socket.io context
+  // No need for separate presence tracking - Socket.io handles it automatically
+
+  // Update chat's last message locally without refetching
+  const updateChatLastMessage = useCallback((chatId, message) => {
+    setChats(prevChats => {
+      return prevChats.map(chat => {
+        if (chat._id === chatId) {
+          return {
+            ...chat,
+            lastMessage: message
+          }
+        }
+        return chat
+      })
+    })
+    // Update selectedChat if it's the current chat (using functional update to avoid dependency)
+    setSelectedChat(prevSelected => {
+      if (prevSelected?._id === chatId) {
+        return {
+          ...prevSelected,
+          lastMessage: message
+        }
+      }
+      return prevSelected
+    })
+  }, [])
 
   // Transform chats data for Sidebar
   const users = chats.map(chat => {
@@ -87,6 +112,11 @@ const Chats = () => {
       }
     }
 
+    // Check if the other participant is online
+    // Normalize IDs to strings for consistent comparison
+    const otherParticipantId = otherParticipant?._id?.toString()
+    const isOnline = otherParticipantId ? onlineUsers.has(otherParticipantId) : false
+
     return {
       id: chat._id,
       chatId: chat._id,
@@ -94,7 +124,7 @@ const Chats = () => {
       userId: otherParticipant?._id,
       name: otherParticipant?.username || 'Unknown User',
       avatar: otherParticipant?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face",
-      online: false, // TODO: Implement online status
+      online: isOnline,
       lastMessage: lastMessageText,
       hasUnread: hasUnread,
       lastMessageTime: lastMessage?.timestamp || chat.createdAt,
@@ -134,7 +164,7 @@ const Chats = () => {
       <ChatContainer 
         selectedChat={selectedChat}
         currentUserId={currentUser?._id}
-        onMessageSent={refreshChats}
+        onMessageSent={updateChatLastMessage}
       />
     </div>
   )

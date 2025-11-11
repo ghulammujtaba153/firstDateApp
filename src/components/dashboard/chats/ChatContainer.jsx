@@ -1,11 +1,18 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react'
-import { FiSend, FiPaperclip, FiMic, FiArrowLeft, FiVideo, FiPhone, FiFile, FiX, FiImage, FiDownload, FiTrash2 } from 'react-icons/fi'
+import { FiPhone } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
 import { BASE_URL } from '../../../config/url'
 import axios from 'axios'
 import { useAuth } from '../../../context/authContext'
+import { useSocket } from '../../../context/socketContext'
+import ChatHeader from './ChatHeader'
+import MessageList from './MessageList'
+import MessageInput from './MessageInput'
 
 const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
   const { user: currentUser } = useAuth()
+  const { socket, isConnected } = useSocket()
+  const navigate = useNavigate()
   const [recording, setRecording] = useState(false)
   const [messages, setMessages] = useState([])
   const [messageInput, setMessageInput] = useState('')
@@ -17,6 +24,8 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
   const [filePreview, setFilePreview] = useState(null)
   const [deletingMessageId, setDeletingMessageId] = useState(null)
   const [hoveredMessageId, setHoveredMessageId] = useState(null)
+  const [incomingCall, setIncomingCall] = useState(null)
+  const [callState, setCallState] = useState(null) // 'calling', 'ringing', 'answered'
   const fileInputRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -25,15 +34,99 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
   // Get the other participant
   const otherParticipant = useMemo(() => {
     if (!selectedChat?.participants || !currentUserId) return null
-    
+
     const currentId = currentUserId?.toString() || currentUser?._id?.toString()
     const found = selectedChat.participants.find(p => {
       const participantId = p._id?.toString() || p?.toString()
       return participantId && participantId !== currentId
     })
-    
+
     return found || selectedChat.participants[0]
   }, [selectedChat, currentUserId, currentUser?._id])
+
+  // Generate consistent channel name from two users' usernames (sorted for consistency)
+  const getChannelName = useMemo(() => {
+    if (!selectedChat?.participants || !currentUser) {
+      console.warn("Cannot generate channel name: missing participants or currentUser")
+      return null
+    }
+    
+    // Get both users (current user and other participant)
+    const currentId = currentUserId?.toString() || currentUser?._id?.toString()
+    
+    // Helper function to extract username from participant
+    const extractUsername = (participant) => {
+      if (!participant) return null
+      
+      // Try username first
+      if (participant.username && typeof participant.username === 'string' && participant.username.trim()) {
+        return participant.username.trim()
+      }
+      
+      // Try email (extract part before @)
+      if (participant.email && typeof participant.email === 'string') {
+        const emailParts = participant.email.split('@')
+        if (emailParts[0] && emailParts[0].trim()) {
+          return emailParts[0].trim()
+        }
+      }
+      
+      // Fallback to ID (last 8 characters for readability)
+      if (participant._id) {
+        const idStr = participant._id.toString()
+        return idStr.slice(-8)
+      }
+      
+      return null
+    }
+    
+    // Get usernames for both participants
+    const currentUserParticipant = selectedChat.participants.find(p => {
+      const participantId = p._id?.toString() || p?.toString()
+      return participantId === currentId
+    }) || currentUser
+    
+    const otherUserParticipant = selectedChat.participants.find(p => {
+      const participantId = p._id?.toString() || p?.toString()
+      return participantId !== currentId
+    })
+    
+    if (!otherUserParticipant) {
+      console.warn("Cannot find other participant for channel name generation")
+      console.debug("Participants:", selectedChat.participants, "Current ID:", currentId)
+      return null
+    }
+    
+    // Extract usernames
+    const currentUsername = extractUsername(currentUserParticipant)
+    const otherUsername = extractUsername(otherUserParticipant)
+    
+    if (!currentUsername || !otherUsername) {
+      console.warn("Cannot extract usernames for channel generation", {
+        currentUserParticipant,
+        otherUserParticipant,
+        currentUsername,
+        otherUsername
+      })
+      return null
+    }
+    
+    // Sort usernames alphabetically to ensure both users generate the same channel name
+    const usernames = [currentUsername, otherUsername]
+      .map(u => u.toLowerCase().trim())
+      .filter(u => u.length > 0)
+      .sort()
+    
+    if (usernames.length !== 2) {
+      console.warn("Invalid usernames for channel generation:", { currentUsername, otherUsername, usernames })
+      return null
+    }
+    
+    // Generate channel name: chat_user1_user2 (sorted, sanitized)
+    const channelName = `chat_${usernames[0]}_${usernames[1]}`.replace(/[^a-z0-9_]/g, '_')
+    console.log("Generated channel name:", channelName, "from users:", usernames, "participants:", selectedChat.participants.map(p => ({ id: p._id, username: p.username, email: p.email })))
+    return channelName
+  }, [selectedChat?.participants, currentUser, currentUserId])
 
   // Fetch messages when chat is selected
   useEffect(() => {
@@ -60,28 +153,6 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Group messages by date
-  const groupMessagesByDate = (messages) => {
-    const grouped = {}
-    messages.forEach(msg => {
-      const date = new Date(msg.timestamp).toLocaleDateString('en-US', {
-        month: 'numeric',
-        day: 'numeric',
-        year: 'numeric'
-      })
-      if (!grouped[date]) {
-        grouped[date] = []
-      }
-      grouped[date].push(msg)
-    })
-    return Object.entries(grouped).map(([date, msgs]) => ({
-      date,
-      messages: msgs
-    }))
-  }
-
-  const groupedMessages = groupMessagesByDate(messages)
-
   const getFileType = (file) => {
     const type = file.type || ''
     if (type.startsWith('image/')) return 'image'
@@ -96,7 +167,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
 
     // Show file preview
     setSelectedFile(file)
-    
+
     // Create preview for images only
     if (file.type.startsWith('image/')) {
       const reader = new FileReader()
@@ -123,7 +194,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
     try {
       setUploadingFile(true)
       setUploadProgress(0)
-      
+
       // Upload file using multer API
       const formData = new FormData()
       formData.append('file', selectedFile)
@@ -155,14 +226,16 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
 
       // Add new message to local state
       setMessages(prev => [...prev, response.data])
-      
+
       // Clear file selection
       removeSelectedFile()
-      
-      // Notify parent to refresh chat list
-      if (onMessageSent) {
-        onMessageSent()
+
+      // Update parent's chat list last message (no refresh needed)
+      if (onMessageSent && selectedChat?._id) {
+        onMessageSent(selectedChat._id, response.data)
       }
+
+      // Socket notification handled automatically by backend
     } catch (error) {
       console.error('Error uploading file:', error)
       alert(error.response?.data?.error || 'Failed to upload file. Please try again.')
@@ -172,34 +245,235 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
     }
   }
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault()
-    if (!messageInput.trim() || !selectedChat?._id || !currentUser?._id || sending) return
+  // Note: Socket.io notifications are handled automatically by the backend
+  // when messages are saved via HTTP API - no need for client-side emit
+
+  // Send call invitation via Socket.io
+  const sendCallInvitation = React.useCallback((callType, channelName, callId) => {
+    if (!socket || !isConnected) {
+      console.info("Socket not connected - call will proceed without invitation")
+      return true
+    }
 
     try {
-      setSending(true)
-      const response = await axios.post(`${BASE_URL}/api/chat/message`, {
-        chatId: selectedChat._id,
-        sender: currentUser._id,
-        content: messageInput.trim(),
-        messageType: 'text'
+      const otherUserId = otherParticipant?._id?.toString()
+      if (!otherUserId) {
+        return true
+      }
+
+      socket.emit('call:invite', {
+        toUserId: otherUserId,
+        callData: {
+          callType,
+          channelName,
+          callId
+        }
+      })
+      console.log("✓ Call invitation sent via Socket.io")
+            return true
+    } catch (err) {
+      console.info("Socket invitation error (non-critical):", err.message || err)
+            return true
+          }
+  }, [socket, isConnected, otherParticipant?._id])
+
+  // Send call response via Socket.io
+  const sendCallResponse = React.useCallback((responseType, callId, channelName, callType) => {
+    if (!socket || !isConnected) {
+      return false
+    }
+
+    try {
+      const otherUserId = otherParticipant?._id?.toString()
+      if (!otherUserId) {
+        return false
+      }
+
+      socket.emit('call:response', {
+        toUserId: otherUserId,
+        responseType,
+        callData: {
+          callId,
+          channelName,
+          callType
+        }
+      })
+        return true
+    } catch (err) {
+      console.error("Failed to send call response:", err)
+      return false
+    }
+  }, [socket, isConnected, otherParticipant?._id])
+
+  // Navigate to call page (defined first to avoid hoisting issues)
+  const navigateToCall = React.useCallback(async (channelName, callType, isAnswer = false) => {
+    try {
+      // Generate token for RTC
+      const tokenResponse = await axios.post(`${BASE_URL}/generate-token`, {
+        channelName: channelName,
+        uid: currentUser._id.toString()
       })
 
-      // Add new message to local state
-      setMessages(prev => [...prev, response.data])
-      setMessageInput('')
-      
-      // Notify parent to refresh chat list
-      if (onMessageSent) {
-        onMessageSent()
+      const callData = {
+        channelName: channelName,
+        uid: currentUser._id.toString(),
+        token: tokenResponse.data.token,
+        callType: callType, // 'audio' or 'video'
+        otherParticipant: otherParticipant,
+        chatId: selectedChat?._id
       }
+
+      navigate('/call', { state: callData })
     } catch (error) {
-      console.error('Error sending message:', error)
-      alert('Failed to send message. Please try again.')
-    } finally {
-      setSending(false)
+      console.error('Error initiating call:', error)
+      alert('Failed to start call. Please try again.')
     }
-  }
+  }, [currentUser._id, otherParticipant, selectedChat?._id, navigate])
+
+  // Initiate call (audio or video)
+  const initiateCall = React.useCallback(async (callType) => {
+    if (!selectedChat?._id || !otherParticipant?._id) {
+      alert('Unable to start call. Please select a chat first.')
+      return
+    }
+
+    // Check if Agora is configured
+    const appId = import.meta.env.VITE_AGORA_APP_ID
+    if (!appId) {
+      alert('Agora is not configured. Please set VITE_AGORA_APP_ID in your .env file.')
+      return
+    }
+
+    try {
+      setCallState('calling')
+      // Use same channel naming pattern as chat (user1_user2) for calls
+      const callChannelName = getChannelName ? `call_${getChannelName.replace('chat_', '')}` : `call_${selectedChat._id}_${Date.now()}`
+      const callId = `${currentUser._id}_${Date.now()}`
+      
+      // Try to send call invitation via Socket.io in background (non-blocking)
+      // Socket.io is optional - RTC calls work independently
+      // Socket.io is only used for call notifications, not for the actual call
+      if (sendCallInvitation) {
+        sendCallInvitation(callType, callChannelName, callId)
+      }
+      
+      // Navigate to call page immediately
+      // Agora RTC works independently - doesn't require Socket.io
+      navigateToCall(callChannelName, callType, false)
+    } catch (error) {
+      console.error('Error initiating call:', error)
+      setCallState(null)
+      // Only show error for critical failures
+      if (error.message && error.message.includes('Agora')) {
+        alert(error.message)
+      } else {
+        alert('Failed to start call. Please check your connection and try again.')
+      }
+    }
+  }, [selectedChat?._id, otherParticipant?._id, currentUser._id, getChannelName, navigateToCall, sendCallInvitation])
+
+  // Answer incoming call
+  const answerCall = React.useCallback(async () => {
+    if (!incomingCall) return
+
+    try {
+      await sendCallResponse('call_answer', incomingCall.callId, incomingCall.channelName, incomingCall.callType)
+      setIncomingCall(null)
+      setCallState(null)
+      navigateToCall(incomingCall.channelName, incomingCall.callType, true)
+    } catch (error) {
+      console.error('Error answering call:', error)
+      alert('Failed to answer call. Please try again.')
+    }
+  }, [incomingCall, sendCallResponse, navigateToCall])
+
+  // Reject incoming call
+  const rejectCall = React.useCallback(async () => {
+    if (!incomingCall) return
+
+    try {
+      await sendCallResponse('call_reject', incomingCall.callId, incomingCall.channelName, incomingCall.callType)
+      setIncomingCall(null)
+      setCallState(null)
+    } catch (error) {
+      console.error('Error rejecting call:', error)
+    }
+  }, [incomingCall, sendCallResponse])
+
+  // Handle incoming Socket.io messages and events
+  useEffect(() => {
+    if (!socket || !isConnected) return
+
+    // Handle new messages
+    const handleNewMessage = (data) => {
+      const { chatId, message } = data
+      
+      // Only add if it's for the currently selected chat and not already present
+      if (chatId === selectedChat?._id) {
+          setMessages(prev => {
+          if (prev.some(m => m._id === message._id)) return prev
+          return [...prev, message]
+          })
+        }
+        
+        // Update parent's chat list last message for incoming messages
+      if (onMessageSent && chatId) {
+        onMessageSent(chatId, message)
+      }
+    }
+
+    // Handle call invitation
+    const handleCallInvite = (data) => {
+      const { from, callType, channelName, callId } = data
+      setIncomingCall({
+        from,
+        callType,
+        channelName,
+        callId
+      })
+      setCallState('ringing')
+    }
+
+    // Handle call response
+    const handleCallResponse = (data) => {
+      const { from, responseType, channelName, callType } = data
+      
+      if (responseType === 'call_answer') {
+        setCallState('answered')
+        navigateToCall(channelName, callType, true)
+      } else if (responseType === 'call_reject' || responseType === 'call_end') {
+        setIncomingCall(null)
+        setCallState(null)
+      }
+    }
+
+    socket.on('message:new', handleNewMessage)
+    socket.on('call:invite', handleCallInvite)
+    socket.on('call:response', handleCallResponse)
+
+    return () => {
+      socket.off('message:new', handleNewMessage)
+      socket.off('call:invite', handleCallInvite)
+      socket.off('call:response', handleCallResponse)
+    }
+  }, [socket, isConnected, selectedChat?._id, onMessageSent, navigateToCall])
+
+  // Join/leave chat room when chat is selected
+  useEffect(() => {
+    if (!socket || !isConnected || !selectedChat?._id) return
+
+    // Join the chat room
+    socket.emit('chat:join', { chatId: selectedChat._id })
+    console.log(`Joined chat room: ${selectedChat._id}`)
+
+    // Cleanup: leave chat room when chat changes or component unmounts
+    return () => {
+      if (socket && isConnected) {
+        socket.emit('chat:leave', { chatId: selectedChat._id })
+        console.log(`Left chat room: ${selectedChat._id}`)
+      }
+    }
+  }, [socket, isConnected, selectedChat?._id])
 
   const handleDeleteMessage = async (messageId) => {
     if (!messageId || deletingMessageId) return
@@ -211,14 +485,12 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
     try {
       setDeletingMessageId(messageId)
       await axios.delete(`${BASE_URL}/api/chat/message/${messageId}`)
-      
+
       // Remove message from local state
       setMessages(prev => prev.filter(msg => msg._id !== messageId))
-      
-      // Notify parent to refresh chat list
-      if (onMessageSent) {
-        onMessageSent()
-      }
+
+      // Note: No need to update parent on delete since last message won't change
+      // (we delete from the middle, not the last message)
     } catch (error) {
       console.error('Error deleting message:', error)
       alert(error.response?.data?.error || 'Failed to delete message. Please try again.')
@@ -227,6 +499,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
     }
   }
 
+  // handle audio recording (unchanged)
   const handleMicClick = async () => {
     if (recording) {
       // Stop recording and send voice note
@@ -254,7 +527,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
             try {
               // Create audio blob
               const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-              
+
               // Create a File object from the blob
               const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, {
                 type: 'audio/webm'
@@ -291,11 +564,13 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
 
               // Add new message to local state
               setMessages(prev => [...prev, response.data])
-              
-              // Notify parent to refresh chat list
-              if (onMessageSent) {
-                onMessageSent()
+
+              // Update parent's chat list last message (no refresh needed)
+              if (onMessageSent && selectedChat?._id) {
+                onMessageSent(selectedChat._id, response.data)
               }
+
+              // Socket.io notification handled automatically by backend
 
               // Clean up
               audioChunksRef.current = []
@@ -321,6 +596,41 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
     }
   }
 
+  // --- NEW: implement handleSendMessage safely ---
+  const handleSendMessage = async (e) => {
+    e.preventDefault()
+    const text = (messageInput || '').trim()
+    console.log("sending message")
+    console.log(text, selectedChat?._id, currentUser?._id, sending)
+    if (!text || !selectedChat?._id || !currentUser?._id || sending) return
+
+    try {
+      setSending(true)
+      const response = await axios.post(`${BASE_URL}/api/chat/message`, {
+        chatId: selectedChat._id,
+        sender: currentUser._id,
+        content: text,
+        messageType: 'text'
+      })
+
+      // Append message locally
+      setMessages(prev => [...prev, response.data])
+      setMessageInput('')
+
+      // Update parent's chat list last message (no refresh needed)
+      if (onMessageSent && selectedChat?._id) {
+        onMessageSent(selectedChat._id, response.data)
+      }
+
+      // Socket notification handled automatically by backend
+    } catch (error) {
+      console.error('Error sending message:', error)
+      alert(error.response?.data?.error || 'Failed to send message. Please try again.')
+    } finally {
+      setSending(false)
+    }
+  }
+
   // Empty state when no chat is selected
   if (!selectedChat) {
     return (
@@ -337,256 +647,44 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white p-3 md:p-6 flex-1 min-w-0">
-      {/* Chat Header */}
-      <div className="mb-3 md:mb-4 border-b border-gray-200 pb-2 md:pb-3 flex items-center gap-2 md:gap-4 justify-between">
-        <div className="flex items-center gap-4">
-          <button className="p-2 rounded-full hover:bg-gray-100">
-            <FiArrowLeft size={22} className="text-gray-600" />
-          </button>
-          <img
-            src={otherParticipant?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"}
-            alt={otherParticipant?.username || "User"}
-            className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0"
-          />
-          <span className="text-base md:text-lg font-semibold truncate">
-            {otherParticipant?.username || otherParticipant?.name || 'Unknown User'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="p-2 rounded-full ">
-            <FiPhone size={20} className="text-gray-500 hover:text-primary" />
-          </button>
-          <button className="p-2 rounded-full ">
-            <FiVideo size={20} className="text-gray-500 hover:text-primary" />
-          </button>
-        </div>
-      </div>
-      {/* Chat Messages Area */}
-      <div className="flex-1 overflow-y-auto mb-3 md:mb-4 flex flex-col gap-2 md:gap-3 slim-scrollbar px-1 md:px-2">
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-400">Loading messages...</p>
-          </div>
-        ) : groupedMessages.length > 0 ? (
-          groupedMessages.map(group => (
-            <React.Fragment key={group.date}>
-              <div className="flex justify-center my-2">
-                <span className="bg-gray-200 text-gray-700 px-4 py-1 rounded-lg text-xs font-medium">
-                  {group.date}
-                </span>
-              </div>
-              {group.messages.map(msg => {
-                const senderId = msg.sender?._id?.toString() || msg.sender?.toString() || msg.sender
-                const currentId = currentUserId?.toString() || currentUser?._id?.toString()
-                const isSent = senderId === currentId
-                
-                // Render different message types
-                const renderMessage = () => {
-                  if (msg.messageType === 'image') {
-                    const imageUrl = msg.content.startsWith('http') ? msg.content : `${BASE_URL}${msg.content}`
-                    return (
-                      <div className={`rounded-xl overflow-hidden max-w-[85%] md:max-w-md shadow-md ${isSent ? 'bg-primary/10' : 'bg-gray-50'}`}>
-                        <img 
-                          src={imageUrl} 
-                          alt="Shared image" 
-                          className="max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => window.open(imageUrl, '_blank')}
-                        />
-                      </div>
-                    )
-                  }
-                  
-                  if (msg.messageType === 'video') {
-                    const videoUrl = msg.content.startsWith('http') ? msg.content : `${BASE_URL}${msg.content}`
-                    return (
-                      <div className={`rounded-xl overflow-hidden max-w-[85%] md:max-w-md shadow-md ${isSent ? 'bg-primary/10' : 'bg-gray-50'}`}>
-                        <video 
-                          src={videoUrl} 
-                          controls 
-                          className="max-w-full h-auto"
-                        />
-                      </div>
-                    )
-                  }
-                  
-                  if (msg.messageType === 'audio') {
-                    const audioUrl = msg.content.startsWith('http') ? msg.content : `${BASE_URL}${msg.content}`
-                    return (
-                      <div className={`px-3 md:px-4 py-2 md:py-3 rounded-xl max-w-[85%] md:max-w-md shadow-sm ${isSent ? 'bg-primary/10' : 'bg-gray-50'}`}>
-                        <div className="flex items-center gap-2 md:gap-3">
-                          <div className={`p-2 rounded-full ${isSent ? 'bg-primary text-white' : 'bg-gray-200'}`}>
-                            <FiMic size={16} className="md:w-4 md:h-4" />
-                          </div>
-                          <audio 
-                            controls 
-                            src={audioUrl}
-                            className="flex-1 h-8 md:h-10"
-                          >
-                            Your browser does not support the audio element.
-                          </audio>
-                        </div>
-                      </div>
-                    )
-                  }
-                  
-                  if (msg.messageType === 'file') {
-                    const fileName = msg.content.split('/').pop() || 'File'
-                    const fileUrl = msg.content.startsWith('http') ? msg.content : `${BASE_URL}${msg.content}`
-                    return (
-                      <a
-                        href={fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`px-3 md:px-4 py-2 md:py-3 rounded-xl max-w-[85%] md:max-w-md break-words flex items-center gap-2 md:gap-3 shadow-sm transition-all text-sm md:text-base ${isSent ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-50 text-gray-800 border hover:bg-gray-100'}`}
-                      >
-                        <FiFile size={18} className="flex-shrink-0 md:w-5 md:h-5" />
-                        <span className="truncate flex-1">{fileName}</span>
-                        <FiDownload size={14} className="flex-shrink-0 md:w-4 md:h-4" />
-                      </a>
-                    )
-                  }
-                  
-                  // Text message
-                  return (
-                    <div className={`px-3 md:px-4 py-2 md:py-2.5 rounded-xl max-w-[85%] md:max-w-md break-words shadow-sm text-sm md:text-base ${isSent ? 'bg-primary text-white' : 'bg-gray-50 text-gray-800 border'}`}>
-                      {msg.content}
-                    </div>
-                  )
-                }
-                
-                return (
-                  <div
-                    key={msg._id}
-                    className={`flex ${isSent ? 'justify-end' : 'justify-start'} group relative`}
-                    onMouseEnter={() => setHoveredMessageId(msg._id)}
-                    onMouseLeave={() => setHoveredMessageId(null)}
-                  >
-                    <div className="relative flex items-center gap-2">
-                      {/* Delete button - only show for sent messages on hover */}
-                      {isSent && hoveredMessageId === msg._id && (
-                        <button
-                          onClick={() => handleDeleteMessage(msg._id)}
-                          disabled={deletingMessageId === msg._id}
-                          className="p-1.5 md:p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-all shadow-md z-10 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                          title="Delete message"
-                        >
-                          {deletingMessageId === msg._id ? (
-                            <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          ) : (
-                            <FiTrash2 size={14} className="md:w-4 md:h-4" />
-                          )}
-                        </button>
-                      )}
-                      {renderMessage()}
-                    </div>
-                  </div>
-                )
-              })}
-            </React.Fragment>
-          ))
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-400">No messages yet. Start the conversation!</p>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      {/* File Preview */}
-      {selectedFile && (
-        <div className="mb-2 md:mb-3 p-2 md:p-3 bg-gray-50 rounded-lg md:rounded-xl border border-gray-200 flex items-center gap-2 md:gap-3">
-          {filePreview ? (
-            <img src={filePreview} alt="Preview" className="w-12 h-12 md:w-16 md:h-16 object-cover rounded-lg flex-shrink-0" />
-          ) : selectedFile.type.startsWith('audio/') ? (
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FiMic size={20} className="text-primary md:w-6 md:h-6" />
-            </div>
-          ) : (
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FiFile size={20} className="text-primary md:w-6 md:h-6" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs md:text-sm font-medium text-gray-800 truncate">{selectedFile.name}</p>
-            <p className="text-xs text-gray-500">
-              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-            </p>
-            {uploadingFile && (
-              <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
-                <div 
-                  className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
-            )}
-          </div>
-          {!uploadingFile && (
-            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <button
-                onClick={handleSendFile}
-                className="px-3 md:px-4 py-1.5 md:py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-xs md:text-sm font-medium"
-              >
-                Send
-              </button>
-              <button
-                onClick={removeSelectedFile}
-                className="p-1.5 md:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <FiX size={18} className="md:w-5 md:h-5" />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+    <div className="flex flex-col h-full bg-white p-3 md:p-6 flex-1 min-w-0 relative">
+      <ChatHeader
+        otherParticipant={otherParticipant}
+        callState={callState}
+        onInitiateCall={initiateCall}
+        incomingCall={incomingCall}
+        onAnswerCall={answerCall}
+        onRejectCall={rejectCall}
+      />
 
-      {/* Chat Input */}
-      <form className="flex gap-1.5 md:gap-2 mt-auto" onSubmit={handleSendMessage}>
-        {/* File Upload */}
-        <label className="flex items-center cursor-pointer relative group flex-shrink-0">
-          <div className="p-2 md:p-2.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <FiPaperclip size={18} className={`${uploadingFile ? 'text-primary animate-pulse' : 'text-gray-500 group-hover:text-primary'} transition-colors md:w-5 md:h-5`} />
-          </div>
-          <input 
-            ref={fileInputRef}
-            type="file" 
-            className="hidden" 
-            onChange={handleFileSelect}
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
-            disabled={uploadingFile || !!selectedFile}
-          />
-        </label>
-        
-        <input
-          type="text"
-          placeholder="Type a message..."
-          value={messageInput}
-          onChange={(e) => setMessageInput(e.target.value)}
-          className="flex-1 px-3 md:px-4 py-2 md:py-2.5 border border-gray-300 rounded-lg md:rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm md:text-base"
-          disabled={sending || uploadingFile}
-        />
-        {/* Audio Record */}
-        <button
-          type="button"
-          onClick={handleMicClick}
-          className={`p-2 md:p-2.5 rounded-lg transition-colors flex-shrink-0 ${recording ? 'bg-red-100 text-red-500' : 'text-gray-500 hover:text-primary hover:bg-gray-100'}`}
-          disabled={uploadingFile || !!selectedFile || sending}
-        >
-          <FiMic size={18} className={recording ? "animate-pulse" : ""} />
-        </button>
-        <button 
-          type="submit" 
-          disabled={sending || uploadingFile || !messageInput.trim() || !!selectedFile}
-          className="bg-primary text-white p-2.5 md:p-3 rounded-lg md:rounded-xl hover:bg-primary/90 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex-shrink-0"
-        >
-          <FiSend size={18} className="md:w-5 md:h-5" />
-        </button>
-      </form>
-      {/* Recording indicator */}
-      {recording && (
-        <div className="text-red-500 mt-2 text-sm flex items-center gap-2">
-          <span className="animate-pulse">●</span> Recording...
-        </div>
-      )}
+      <MessageList
+        messages={messages}
+        loading={loading}
+        currentUserId={currentUserId}
+        currentUser={currentUser}
+        onDeleteMessage={handleDeleteMessage}
+        deletingMessageId={deletingMessageId}
+        hoveredMessageId={hoveredMessageId}
+        setHoveredMessageId={setHoveredMessageId}
+        messagesEndRef={messagesEndRef}
+      />
+
+      <MessageInput
+        messageInput={messageInput}
+        setMessageInput={setMessageInput}
+        sending={sending}
+        uploadingFile={uploadingFile}
+        selectedFile={selectedFile}
+        filePreview={filePreview}
+        uploadProgress={uploadProgress}
+        recording={recording}
+        fileInputRef={fileInputRef}
+        onFileSelect={handleFileSelect}
+        onRemoveFile={removeSelectedFile}
+        onSendFile={handleSendFile}
+        onSendMessage={handleSendMessage}
+        onMicClick={handleMicClick}
+      />
     </div>
   )
 }
