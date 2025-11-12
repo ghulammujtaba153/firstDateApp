@@ -2,43 +2,26 @@ import React, { useState, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 
 const options = [
-  { label: "Camping 🏕️", value: "camping" },
-  { label: "Food 🍔", value: "food" },
-  { label: "Wine 🍷", value: "wine" },
-  { label: "Crafts 🎨", value: "crafts" },
-  { label: "Festivals 🎉", value: "festivals" },
-  { label: "Skiing 🎿", value: "skiing" },
-  { label: "Music 🎵", value: "music" },
-  { label: "Concerts 🎤", value: "concerts" },
-  { label: "Art Galleries 🖼️", value: "art_galleries" },
-  { label: "Tennis 🎾", value: "tennis" },
-  { label: "Classical Music 🎻", value: "classical_music" },
-  { label: "Rock Music 🎸", value: "rock_music" },
-  { label: "Country Music 🤠", value: "country_music" },
-  { label: "AFL 🏉", value: "afl" },
-  { label: "Rugby League 🏈", value: "rugby_league" },
-  { label: "Rugby Union 🏉", value: "rugby_union" },
-  { label: "Soccer ⚽", value: "soccer" },
-  { label: "City Breaks 🏙️", value: "city_breaks" },
-  { label: "Coffee ☕", value: "coffee" },
-  { label: "Chocolate 🍫", value: "chocolate" },
-  { label: "Dancing 💃", value: "dancing" },
-  { label: "Gardening 🌿", value: "gardening" },
-  { label: "Museums 🏛️", value: "museums" },
-  { label: "Travel ✈️", value: "travel" },
-  { label: "R&B Music 🎧", value: "rnb_music" },
-  { label: "Animals 🐾", value: "animals" },
-  { label: "Politics 🗳️", value: "politics" },
-  { label: "Home DIY 🛠️", value: "home_diy" },
-  { label: "Astronomy 🌌", value: "astronomy" },
-  { label: "Computers 💻", value: "computers" },
+  { label: "Ambitious 💼", value: "ambitious" },
+  { label: "Confident 😎", value: "confident" },
+  { label: "Shy 😊", value: "shy" },
+  { label: "Empathetic 💖", value: "empathetic" },
+  { label: "Generous 🎁", value: "generous" },
+  { label: "Funny 😂", value: "funny" },
+  { label: "Kind 🤗", value: "kind" },
+  { label: "Loyal 🐾", value: "loyal" },
+  { label: "Optimistic 🌞", value: "optimistic" },
+  { label: "Playful 🎈", value: "playful" },
+  { label: "Curious 🔍", value: "curious" },
+  { label: "Intelligent 🧠", value: "intelligent" },
+  { label: "Reserved 🤫", value: "reserved" },
 ];
 
-const HoobiesSection = ({ value = [], onChange }) => {
+const PersonalitySection = ({ value = [], onChange }) => {
   const [selected, setSelected] = useState(value);
   const [search, setSearch] = useState("");
 
-  // Sync with parent value
+  // Sync with parent updates
   useEffect(() => {
     setSelected(value);
   }, [value]);
@@ -61,9 +44,9 @@ const HoobiesSection = ({ value = [], onChange }) => {
   return (
     <div className="text-center">
       <div className="my-4 text-left">
-        <h1 className="text-xl font-bold mb-2">Lifestyle & Hobbies 🎧</h1>
+        <h1 className="text-xl font-bold mb-2">Personality Type 💬</h1>
         <p className="text-gray-600 mb-4">
-          Select hobbies that best describe you. Others won’t see exact choices.
+          What kind of person are you? Pick traits that describe you best.
         </p>
       </div>
 
@@ -74,7 +57,7 @@ const HoobiesSection = ({ value = [], onChange }) => {
         </span>
         <input
           type="text"
-          placeholder="Search hobbies..."
+          placeholder="Search personality type..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:outline-none"
@@ -101,4 +84,4 @@ const HoobiesSection = ({ value = [], onChange }) => {
   );
 };
 
-export default HoobiesSection;
+export default PersonalitySection;

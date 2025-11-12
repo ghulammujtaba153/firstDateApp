@@ -3,8 +3,10 @@ import { FaEnvelope, FaLock, FaPhoneAlt, FaGoogle, FaEye } from "react-icons/fa"
 import { LuEyeClosed } from "react-icons/lu";
 import { Link } from "react-router-dom";
 import Notification from "../components/common/Notification";
-import { BASE_URL } from './../config/url';
+import { BASE_URL } from "./../config/url";
 import axios from "axios";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css"; // ✅ import the default styling
 
 const Register = () => {
   const [show, setShow] = useState(false); // success notification
@@ -24,7 +26,6 @@ const Register = () => {
   };
 
   const handleGoogleSignup = () => {
-    // Redirect user to backend Google auth route
     window.location.href = `${BASE_URL}/auth/google/callback`;
   };
 
@@ -62,7 +63,7 @@ const Register = () => {
 
   return (
     <div className="flex w-full min-h-screen">
-      {/* Success Notification */}
+      {/* ✅ Success Notification */}
       {show && (
         <Notification
           title="Verify Your Email"
@@ -73,7 +74,7 @@ const Register = () => {
         />
       )}
 
-      {/* Error Notification */}
+      {/* ❌ Error Notification */}
       {error && (
         <Notification
           title="Error"
@@ -93,12 +94,11 @@ const Register = () => {
             <img src="/logo.png" alt="register" className="w-20 h-20" />
             <h1 className="text-3xl font-bold">Create an Account</h1>
             <p className="text-gray-500 text-sm">
-              Create your account in seconds. We’ll help you find your perfect
-              date.
+              Create your account in seconds. We’ll help you find your perfect date.
             </p>
           </div>
 
-          {/* Email */}
+          {/* 📧 Email */}
           <label className="self-start mb-1 font-medium">Email</label>
           <div className="flex items-center border border-gray-100 bg-gray-50 rounded-md p-2 w-full my-2">
             <FaEnvelope className="mr-2" />
@@ -112,21 +112,38 @@ const Register = () => {
             />
           </div>
 
-          {/* Phone */}
+          {/* 📱 Phone with country dropdown */}
           <label className="self-start mb-1 font-medium">Phone</label>
           <div className="flex items-center border border-gray-100 bg-gray-50 rounded-md p-2 w-full my-2">
             <FaPhoneAlt className="mr-2" />
-            <input
-              type="tel"
-              name="phone"
-              placeholder="Phone"
-              onChange={handleChange}
-              className="outline-none w-full bg-transparent"
-              required
-            />
+            <div className="w-full">
+              <PhoneInput
+                country={"us"} // us default
+                value={form.phone}
+                onChange={(phone) => setForm({ ...form, phone })}
+                inputStyle={{
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  fontSize: "14px",
+                }}
+                buttonStyle={{
+                  border: "none",
+                  background: "transparent",
+                }}
+                dropdownStyle={{
+                  background: "#fff",
+                }}
+                enableSearch={true}
+                inputProps={{
+                  required: true,
+                  name: "phone",
+                }}
+              />
+            </div>
           </div>
 
-          {/* Password */}
+          {/* 🔒 Password */}
           <label className="self-start mb-1 font-medium">Password</label>
           <div className="flex items-center border border-gray-100 bg-gray-50 rounded-md p-2 w-full my-2 relative">
             <FaLock className="mr-2" />
@@ -141,19 +158,14 @@ const Register = () => {
             <span
               className="absolute right-3 cursor-pointer text-gray-400"
               onClick={() => setShowPassword((prev) => !prev)}
-              tabIndex={0}
-              role="button"
-              aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {!showPassword ? <LuEyeClosed /> : <FaEye />}
             </span>
           </div>
 
-          {/* Confirm Password */}
-          <label className="self-start mb-1 font-medium">
-            Confirm Password
-          </label>
-          <div className="flex items-center border rounded-md border-gray-100 bg-gray-50 p-2 w-full my-2 relative">
+          {/* 🔒 Confirm Password */}
+          <label className="self-start mb-1 font-medium">Confirm Password</label>
+          <div className="flex items-center border border-gray-100 bg-gray-50 rounded-md p-2 w-full my-2 relative">
             <FaLock className="mr-2" />
             <input
               type={showConfirmPassword ? "text" : "password"}
@@ -166,17 +178,12 @@ const Register = () => {
             <span
               className="absolute right-3 cursor-pointer text-gray-400"
               onClick={() => setShowConfirmPassword((prev) => !prev)}
-              tabIndex={0}
-              role="button"
-              aria-label={
-                showConfirmPassword ? "Hide password" : "Show password"
-              }
             >
               {!showConfirmPassword ? <LuEyeClosed /> : <FaEye />}
             </span>
           </div>
 
-          {/* Register button */}
+          {/* 🔘 Register button */}
           <button
             disabled={loading}
             className="bg-primary text-white rounded-full p-2 w-full my-2"
@@ -184,8 +191,8 @@ const Register = () => {
             {loading ? "Sending OTP..." : "Register"}
           </button>
 
-          {/* Or sign up with Google */}
-          <button 
+          {/* 🧭 Or sign up with Google */}
+          <button
             type="button"
             onClick={handleGoogleSignup}
             className="flex items-center justify-center border border-gray-200 rounded-full p-2 w-full my-2 hover:bg-gray-100 transition"
@@ -203,7 +210,7 @@ const Register = () => {
         </form>
       </div>
 
-      {/* Right side - image (hidden below md) */}
+      {/* 🖼️ Right side image */}
       <div
         className="hidden md:block w-1/2 h-screen"
         style={{
@@ -219,10 +226,10 @@ const Register = () => {
           src="/signup.png"
           alt="register"
           className="w-full h-full object-cover"
-          style={{ objectFit: "cover", width: "100%", height: "100%" }}
         />
       </div>
-      {/* Add padding to left side to prevent overlap on md+ */}
+
+      {/* padding for layout */}
       <div className="hidden md:block" style={{ width: "50vw" }}></div>
     </div>
   );

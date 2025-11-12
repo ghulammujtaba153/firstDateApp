@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import upload from "../../utils/upload";
 
 const PhotosSection = ({ value = [], onChange }) => {
@@ -7,14 +7,79 @@ const PhotosSection = ({ value = [], onChange }) => {
     ...Array(6 - value.length).fill(null),
   ]);
   const [loadingStates, setLoadingStates] = useState(Array(6).fill(false));
+  const isUploadingRef = useRef(false);
+  const lastValueRef = useRef(value);
 
-  // Sync with parent value
+  // Sync with parent value only when it's not from our own onChange
+  // Use ref to track if we're currently uploading to prevent sync conflicts
   useEffect(() => {
-    setImages([...value, ...Array(6 - value.length).fill(null)]);
+    // Skip sync if we're currently uploading
+    if (isUploadingRef.current) {
+      return;
+    }
+    
+    // Skip sync if value hasn't actually changed
+    if (JSON.stringify(value) === JSON.stringify(lastValueRef.current)) {
+      return;
+    }
+    
+    // Use functional update to get latest images state
+    setImages(prevImages => {
+      const valueUrls = value || [];
+      const currentUrls = prevImages
+        .filter(img => img && (typeof img === 'string' || img.url))
+        .map(img => typeof img === 'string' ? img : img.url);
+      
+      // If value is the same as what we have, don't sync (prevents loop)
+      if (valueUrls.length === currentUrls.length && 
+          valueUrls.every(url => currentUrls.includes(url))) {
+        lastValueRef.current = value;
+        return prevImages; // Return unchanged
+      }
+      
+      // Map value URLs to existing positions where possible
+      const urlToIndexMap = new Map();
+      prevImages.forEach((img, idx) => {
+        if (img) {
+          const imgUrl = typeof img === 'string' ? img : img.url;
+          if (imgUrl) {
+            urlToIndexMap.set(imgUrl, idx);
+          }
+        }
+      });
+      
+      const newImages = Array(6).fill(null);
+      valueUrls.forEach((url) => {
+        const existingIndex = urlToIndexMap.get(url);
+        if (existingIndex !== undefined) {
+          newImages[existingIndex] = url;
+        } else {
+          const emptyIndex = newImages.findIndex(img => !img);
+          if (emptyIndex !== -1) {
+            newImages[emptyIndex] = url;
+          }
+        }
+      });
+      
+      // Preserve preview/loading states from prevImages
+      prevImages.forEach((img, idx) => {
+        if (img && typeof img === 'object' && (img.preview || img.loading)) {
+          // If this slot doesn't have a URL yet, preserve the preview/loading state
+          if (!newImages[idx] || (typeof newImages[idx] === 'string' && img.preview)) {
+            newImages[idx] = img;
+          }
+        }
+      });
+      
+      lastValueRef.current = value;
+      return newImages;
+    });
   }, [value]);
 
   const handleImageChange = async (index, file) => {
     if (!file) return;
+
+    isUploadingRef.current = true;
 
     try {
       // Set loading state for this image
@@ -24,12 +89,14 @@ const PhotosSection = ({ value = [], onChange }) => {
         return newStates;
       });
 
-      // Immediately show preview (local)
+      // Immediately show preview (local) - use functional update to ensure we have latest state
       const reader = new FileReader();
       reader.onloadend = () => {
-        const newImages = [...images];
-        newImages[index] = { preview: reader.result, url: null, loading: true };
-        setImages(newImages);
+        setImages(prevImages => {
+          const newImages = [...prevImages];
+          newImages[index] = { preview: reader.result, url: null, loading: true };
+          return newImages;
+        });
       };
       reader.readAsDataURL(file);
 
@@ -37,9 +104,30 @@ const PhotosSection = ({ value = [], onChange }) => {
       const url = await upload(file);
 
       if (url) {
-        const newImages = [...images];
-        newImages[index] = { url, loading: false };
-        setImages(newImages);
+        // Use functional update to ensure we have the latest state
+        setImages(prevImages => {
+          const newImages = [...prevImages];
+          newImages[index] = { url, loading: false };
+          
+          // Notify parent with updated URLs - preserve order based on index
+          if (onChange) {
+            // Build URLs array preserving the order/positions
+            // Simply collect URLs in order from slots 0-5
+            const urlsOnly = [];
+            newImages.forEach((img, idx) => {
+              if (img && (typeof img === 'string' || img.url)) {
+                const imgUrl = typeof img === 'string' ? img : img.url;
+                if (imgUrl) {
+                  urlsOnly.push(imgUrl);
+                }
+              }
+            });
+            
+            onChange(urlsOnly);
+          }
+          
+          return newImages;
+        });
 
         // Clear loading state
         setLoadingStates(prev => {
@@ -47,13 +135,6 @@ const PhotosSection = ({ value = [], onChange }) => {
           newStates[index] = false;
           return newStates;
         });
-
-        if (onChange) {
-          const urlsOnly = newImages
-            .filter(img => img && img.url !== null && img.url !== undefined)
-            .map(img => img.url);
-          onChange(urlsOnly);
-        }
       }
     } catch (error) {
       console.error("Upload failed:", error);
@@ -63,6 +144,18 @@ const PhotosSection = ({ value = [], onChange }) => {
         newStates[index] = false;
         return newStates;
       });
+      
+      // Remove the preview on error
+      setImages(prevImages => {
+        const newImages = [...prevImages];
+        newImages[index] = null;
+        return newImages;
+      });
+    } finally {
+      // Allow syncing again after a short delay
+      setTimeout(() => {
+        isUploadingRef.current = false;
+      }, 100);
     }
   };
 
@@ -134,9 +227,14 @@ const PhotosSection = ({ value = [], onChange }) => {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) =>
-                  handleImageChange(index, e.target.files?.[0] || null)
-                }
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  if (file) {
+                    handleImageChange(index, file);
+                  }
+                  // Reset input value to allow selecting the same file again
+                  e.target.value = '';
+                }}
                 disabled={loading}
               />
             </label>

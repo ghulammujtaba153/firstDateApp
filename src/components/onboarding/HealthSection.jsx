@@ -5,7 +5,6 @@ const options = [
   { label: "Smoker 🚬", value: "Smoker" },
   { label: "Non-smoker 🚭", value: "NonSmoker" },
   { label: "Drinks 🍷", value: "Drinks" },
-  { label: "Heavy ⚡", value: "Heavy" },
 ];
 
 const HealthSection = ({ value, onChange }) => {

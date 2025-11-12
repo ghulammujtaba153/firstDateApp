@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from "react";
 
 const HeightSection = ({ value, onChange }) => {
-  const [unit, setUnit] = useState("cm"); // cm or ft-in
+  const [unit, setUnit] = useState("cm"); // "cm" or "ft-in"
   const [cm, setCm] = useState("");
   const [feet, setFeet] = useState("");
   const [inches, setInches] = useState("");
 
-  // When parent gives value (in cm), sync with local state
+  // Dropdown options
+  const cmOptions = Array.from({ length: 121 }, (_, i) => 120 + i); // 120–240
+  const feetOptions = [3, 4, 5, 6, 7, 8];
+  const inchOptions = Array.from({ length: 12 }, (_, i) => i); // 0–11
+
+  // When parent provides value (in cm)
   useEffect(() => {
     if (value) {
       const cmVal = Number(value);
       setCm(cmVal);
 
-      // Convert cm to feet+inches
+      // Convert cm to feet + inches
       const totalInches = cmVal / 2.54;
       const ft = Math.floor(totalInches / 12);
       const inch = Math.round(totalInches % 12);
@@ -21,7 +26,7 @@ const HeightSection = ({ value, onChange }) => {
     }
   }, [value]);
 
-  // Handle cm input
+  // Handle cm change
   const handleCmChange = (val) => {
     setCm(val);
     if (val) {
@@ -31,7 +36,7 @@ const HeightSection = ({ value, onChange }) => {
     }
   };
 
-  // Handle ft/in input
+  // Handle ft/in change
   const handleFeetInchesChange = (ft, inch) => {
     setFeet(ft);
     setInches(inch);
@@ -80,31 +85,48 @@ const HeightSection = ({ value, onChange }) => {
         </button>
       </div>
 
-      {/* Input fields */}
+      {/* CM Dropdown */}
       {unit === "cm" ? (
-        <input
-          type="number"
+        <select
           value={cm}
           onChange={(e) => handleCmChange(e.target.value)}
-          placeholder="Enter height in cm"
           className="w-full px-3 py-2 bg-gray-100 border rounded-lg outline-none text-center"
-        />
+        >
+          <option value="">Select your height (cm)</option>
+          {cmOptions.map((val) => (
+            <option key={val} value={val}>
+              {val} cm
+            </option>
+          ))}
+        </select>
       ) : (
-        <div className="flex justify-center gap-2">
-          <input
-            type="number"
+        // FT-IN Dropdowns
+        <div className="flex justify-center gap-3">
+          <select
             value={feet}
             onChange={(e) => handleFeetInchesChange(e.target.value, inches)}
-            placeholder="Feet"
             className="w-1/2 px-3 py-2 bg-gray-100 border rounded-lg outline-none text-center"
-          />
-          <input
-            type="number"
+          >
+            <option value="">Feet</option>
+            {feetOptions.map((ft) => (
+              <option key={ft} value={ft}>
+                {ft} ft
+              </option>
+            ))}
+          </select>
+
+          <select
             value={inches}
             onChange={(e) => handleFeetInchesChange(feet, e.target.value)}
-            placeholder="Inches"
             className="w-1/2 px-3 py-2 bg-gray-100 border rounded-lg outline-none text-center"
-          />
+          >
+            <option value="">Inches</option>
+            {inchOptions.map((inch) => (
+              <option key={inch} value={inch}>
+                {inch} in
+              </option>
+            ))}
+          </select>
         </div>
       )}
     </div>

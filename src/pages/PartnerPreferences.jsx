@@ -7,6 +7,7 @@ import PartnerBody from "../components/partnerPreferences/PartnerBody";
 import PartnerHealth from "../components/partnerPreferences/PartnerHealth";
 import PartnerHobbies from "../components/partnerPreferences/PartnerHobbies";
 import PartnerLocation from "../components/partnerPreferences/PartnerLocation";
+import PartnerPersonality from "../components/partnerPreferences/PartnerPersonality";
 import axios from "axios";
 import { BASE_URL } from "../config/url";
 import { useAuth } from "../context/authContext";
@@ -22,10 +23,11 @@ const PartnerPreferences = () => {
     partnerHealth: [],
     partnerHobbies: [],
     partnerLocation: "",
+    partnerPersonality: [],
     onboardingComlete: true,
   });
 
-  const totalSteps = 4; // 0–4 → 5 steps
+  const totalSteps = 5; // 0–4 → 5 steps
   const progress = ((currentStep + 1) / (totalSteps + 1)) * 100;
 
   const handleSubmit = async () => {
@@ -88,7 +90,8 @@ const PartnerPreferences = () => {
           {currentStep === 2 && <PartnerHealth form={form} setForm={setForm} />}
           {currentStep === 3 && <PartnerHobbies form={form} setForm={setForm} />}
           {currentStep === 4 && <PartnerLocation form={form} setForm={setForm} />}
-
+          {currentStep === 5 && <PartnerPersonality form={form} setForm={setForm} />}
+          
           {/* Navigation */}
           <div className="flex justify-between mt-6">
             <button

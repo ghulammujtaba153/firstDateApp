@@ -13,6 +13,11 @@ import HobbiesSection from "../components/onboarding/HobbiesSection";
 import WeightSection from "../components/onboarding/WeightSection";
 import Locationsection from "../components/onboarding/Locationsection";
 import UserNameSection from "../components/onboarding/UserNameSection";
+import PersonalitySection from "../components/onboarding/PersonalitySection";
+import PoliticsSection from "../components/onboarding/PoliticsSection";
+import ReligionSection from "../components/onboarding/ReligionSection";
+import FamillySection from "../components/onboarding/FamillySection";
+import ChatOpenerSection from "../components/onboarding/ChatOpenerSection";
 import { useAuth } from "../context/authContext";
 import axios from "axios";
 import { BASE_URL } from "../config/url";
@@ -40,9 +45,17 @@ const OnBoarding = () => {
     hobbies: [],
     images: [],
     location: "",
+    personality: [],
+    politics: "",
+    religion: "",
+    family: {
+      haveKids: "",
+      wantKids: "",
+    },
+    chatOpeners: [],
   });
 
-  const totalSteps = 10; // steps: 0–10 inclusive
+  const totalSteps = 15; // steps: 0–15 inclusive
   const progress = ((currentStep + 1) / (totalSteps + 1)) * 100;
 
   // ✅ Submit form
@@ -168,7 +181,36 @@ const OnBoarding = () => {
               onChange={(val) => setFormData({ ...formData, location: val })}
             />
           )}
-
+          {currentStep === 11 && (
+            <PersonalitySection
+              value={formData.personality}
+              onChange={(val) => setFormData({ ...formData, personality: val })}
+            />
+          )}
+          {currentStep === 12 && (
+            <PoliticsSection
+              value={formData.politics}
+              onChange={(val) => setFormData({ ...formData, politics: val })}
+            />
+          )}
+          {currentStep === 13 && (
+            <ReligionSection
+              value={formData.religion}
+              onChange={(val) => setFormData({ ...formData, religion: val })}
+            />
+          )}
+          {currentStep === 14 && (
+            <FamillySection
+              value={formData.family}
+              onChange={(val) => setFormData({ ...formData, family: val })}
+            />
+          )}
+          {currentStep === 15 && (
+            <ChatOpenerSection
+              value={formData.chatOpeners}
+              onChange={(val) => setFormData({ ...formData, chatOpeners: val })}
+            />
+          )}
           {/* Navigation Buttons */}
           <div className="flex flex-col gap-4 mt-6">
             <button
