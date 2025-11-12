@@ -107,6 +107,9 @@ const FaceTryVerification = () => {
       form.append("user_image", dataURLToBlob(selfie), "selfie.png");
       form.append("ref_image", dataURLToBlob(idImage), "id.png");
 
+      // Call Didit API endpoint for face verification
+      // Endpoint: POST /api/verify-face
+      // Controller: server/controller/diditController.js
       const res = await fetch(`${BASE_URL}/api/verify-face`, {
         method: "POST",
         body: form,

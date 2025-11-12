@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaSearch, FaBell, FaCommentDots, FaUser, FaSignOutAlt, FaTimes } from "react-icons/fa";
+import { FaSearch, FaBell, FaCommentDots, FaUser, FaSignOutAlt, FaTimes, FaCamera } from "react-icons/fa";
 import { VscVerifiedFilled } from "react-icons/vsc";
 import { useAuth } from "../../context/authContext";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { BASE_URL } from "../../config/url";
 import axios from "axios";
 
@@ -11,7 +11,7 @@ const Header = () => {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
-  const { user, logout, token } = useAuth();
+  const { user, logout, token, setUser } = useAuth();
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
@@ -71,6 +71,11 @@ const Header = () => {
 
   const handleProfileClick = () => {
     navigate('/dashboard/profile');
+    setDropdownOpen(false);
+  }
+
+  const handleVerificationClick = () => {
+    navigate('/verification');
     setDropdownOpen(false);
   }
 
@@ -213,16 +218,32 @@ const Header = () => {
             onClick={() => setDropdownOpen(!dropdownOpen)}
           />
 
+          {
+            user?.verified && (
+              <span className="absolute bottom-0 right-0 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <VscVerifiedFilled size={10} />
+              </span>
+            )
+          }
+
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50">
-              <p className="px-4 py-2 text-gray-700 font-semibold">Hello, {user?.username || 'User'} {user?.verified ? <VscVerifiedFilled /> : ""}</p>
+              <p className="px-4 py-2 text-gray-700 font-semibold">Hello, {user?.username || 'User'}</p>
               <hr />
+              <button
+               onClick={handleVerificationClick}
+               className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600"
+             >
+                <FaCamera /> Verification
+
+              </button>
               <button 
                 onClick={handleProfileClick}
                 className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600"
               >
                 <FaUser /> Profile
               </button>
+
               <button 
                 onClick={handleLogout} 
                 className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600"

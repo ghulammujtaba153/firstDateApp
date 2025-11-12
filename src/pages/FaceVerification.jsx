@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import * as faceapi from "face-api.js";
 import { BASE_URL } from "../config/url";
 import axios from "axios";
 import { useAuth } from "../context/authContext";
@@ -9,15 +8,17 @@ import { useNavigate } from "react-router-dom";
 
 const FaceVerification = () => {
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const [status, setStatus] = useState("Loading models...");
-  const [referenceDescriptors, setReferenceDescriptors] = useState([]);
-  const [pageLoader, setPageLoader] = useState(true);
+  const [status, setStatus] = useState("Please upload your photo and start camera...");
+  const [userPhoto, setUserPhoto] = useState(null); // Reference image (data URL)
+  const [capturedSelfie, setCapturedSelfie] = useState(null); // Captured selfie (data URL)
+  const [pageLoader, setPageLoader] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationType, setNotificationType] = useState("success");
   const [showRetryOptions, setShowRetryOptions] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
-  const { user, loading } = useAuth();
+  const { user, loading, setUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const router = useNavigate();
 
@@ -116,167 +117,187 @@ const FaceVerification = () => {
     }
   };
 
-  // ✅ Fetch latest user data (with images)
-  const fetchUser = async () => {
-    try {
-      const response = await axios.get(`${BASE_URL}/api/auth/${user._id}`);
-      const userData = response.data;
-      console.log("Fetched user:", userData);
+  // ✅ Convert File to data URL
+  const fileToDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-      if (userData?.images?.length > 0) {
-        await loadReferenceImages(userData.images);
-        setStatus("✅ Ready to verify your face");
-      } else {
-        setStatus("❌ No reference images found for this user.");
-      }
-      return true;
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-      setStatus("❌ Failed to load user data.");
-      return false;
-    }
-  };
-
-  // ✅ Extract face descriptors from user's saved images
-  const loadReferenceImages = async (images) => {
+  // ✅ Handle user photo upload (reference image)
+  const handleUserPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
     try {
-      const descriptors = [];
-      for (const imgUrl of images) {
-        const img = await faceapi.fetchImage(imgUrl);
-        const detection = await faceapi
-          .detectSingleFace(img)
-          .withFaceLandmarks(true)
-          .withFaceDescriptor();
-        if (detection) {
-          descriptors.push(detection.descriptor);
-        }
-      }
-      if (descriptors.length > 0) {
-        setReferenceDescriptors(descriptors);
-      } else {
-        throw new Error("No faces detected in reference images");
-      }
+      setStatus("📸 Loading your photo...");
+      const dataUrl = await fileToDataUrl(file);
+      setUserPhoto(dataUrl);
+      setStatus("✅ Photo uploaded. Please start camera and capture your selfie.");
     } catch (err) {
-      console.error("Error loading reference images:", err);
-      throw err;
+      console.error("Failed to read file:", err);
+      setStatus("❌ Failed to read photo. Please try again.");
+      alert("Failed to read photo");
     }
   };
 
-  // ✅ Load models, then user data, then start camera (SEQUENTIAL)
+  // ✅ Capture selfie from camera
+  const captureSelfie = () => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (!video || !canvas) {
+      setStatus("❌ Camera not ready. Please start camera first.");
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = canvas.toDataURL("image/png");
+    setCapturedSelfie(imageData);
+    setStatus("✅ Selfie captured! Click 'Verify Face' to compare.");
+  };
+
+  // ✅ Initialize camera on mount
   useEffect(() => {
     if (loading) return; // Wait for auth context to load
 
-    const initializeVerification = async () => {
+    const initializeCamera = async () => {
       try {
-        setPageLoader(true);
-        setStatus("Loading models...");
-
-        // Step 1: Load all models
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri("/models"),
-          faceapi.nets.faceLandmark68TinyNet.loadFromUri("/models"),
-          faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
-        ]);
-        setStatus("Models loaded ✅ Loading user data...");
-
-        // Step 2: Fetch user and reference images
-        const userLoaded = await fetchUser();
-        
-        if (!userLoaded) {
-          setPageLoader(false);
-          return;
-        }
-
-        // Step 3: Start camera only after everything is ready
         setStatus("Starting camera...");
         await startVideo();
-        setStatus("✅ Ready to verify your face");
-
+        setStatus("✅ Camera ready. Please upload your photo first.");
       } catch (error) {
-        console.error("Initialization failed:", error);
-        setStatus("❌ Failed to initialize. Please refresh the page.");
-      } finally {
-        setPageLoader(false);
+        console.error("Camera initialization failed:", error);
+        setStatus("❌ Failed to start camera. Please refresh the page.");
       }
     };
 
-    initializeVerification();
+    initializeCamera();
   }, [loading, user?._id]);
 
-  // ✅ Detect face from live camera
-  const detectFaceFromCamera = async () => {
-    if (!videoRef.current) return null;
-    const detection = await faceapi
-      .detectSingleFace(videoRef.current)
-      .withFaceLandmarks(true)
-      .withFaceDescriptor();
-    return detection ? detection.descriptor : null;
+  // ✅ Convert dataURL to Blob for API
+  const dataURLToBlob = (dataURL) => {
+    const parts = dataURL.split(',');
+    const m = parts[0].match(/:(.*?);/);
+    const mime = m ? m[1] : 'image/png';
+    const binary = atob(parts[1]);
+    const len = binary.length;
+    const u8 = new Uint8Array(len);
+    for (let i = 0; i < len; i++) u8[i] = binary.charCodeAt(i);
+    return new Blob([u8], { type: mime });
   };
 
-  // ✅ Compare camera face with reference faces
+  // ✅ Compare captured selfie with user photo using Didit API
   const handleVerify = async () => {
-    if (referenceDescriptors.length === 0) {
-      setStatus("❌ No reference descriptors available.");
+    if (!userPhoto) {
+      setStatus("❌ Please upload your photo first.");
       return;
     }
 
-    setStatus("📸 Detecting face from camera...");
-    const liveDescriptor = await detectFaceFromCamera();
-    if (!liveDescriptor) {
-      setStatus("❌ No face detected. Try again.");
-      setShowRetryOptions(true);
+    if (!capturedSelfie) {
+      setStatus("❌ Please capture your selfie first.");
+      return;
+    }
+
+    setSubmitting(true);
+    setStatus("🔄 Verifying faces...");
+
+    try {
+      const form = new FormData();
+      form.append("user_image", dataURLToBlob(capturedSelfie), "selfie.png");
+      form.append("ref_image", dataURLToBlob(userPhoto), "user_photo.png");
+
+      // Call Didit API endpoint for face verification
+      // Endpoint: POST /api/verify-face
+      // Controller: server/controller/diditController.js
+      const res = await fetch(`${BASE_URL}/api/verify-face`, {
+        method: "POST",
+        body: form,
+      });
+
+      // Parse JSON response
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        const text = await res.text().catch(() => "");
+        data = text ? { raw: text } : null;
+      }
+
+      console.log("API Response:", data);
+
+      // Extract score from Didit response
+      const faceMatch = data?.face_match ?? data?.result ?? data;
+      const score = faceMatch?.score ?? data?.confidence ?? data?.score;
+      const status = faceMatch?.status ?? data?.match ?? data?.is_match;
+
+      // Check if score is >= 85
+      if (typeof score === "number" && score >= 85) {
+        // Verification successful - update user status
+        try {
+          const res = await axios.put(`${BASE_URL}/api/auth/onboarding/${user._id}`, {
+            verified: true
+          });
+
+          setUser(res.data);
+
+          // Stop camera before navigating
+          stopCamera();
+          
+          setVerificationResult({
+            success: true,
+            similarity: score / 100, // Convert to 0-1 scale for display
+            message: `✅ Verification successful! Score: ${score}%`
+          });
+          setNotificationType("success");
+          setShowNotification(true);
+          
+          // Navigate after a short delay
+          setTimeout(() => {
+            router("/login");
+          }, 2000);
+        } catch (error) {
+          console.error("Error updating verification status:", error);
+          setStatus("❌ Error updating verification status.");
+          setVerificationResult({
+            success: false,
+            similarity: score / 100,
+            message: `Verification passed (${score}%) but failed to update status. Please try again.`
+          });
+          setNotificationType("error");
+          setShowNotification(true);
+        }
+      } else {
+        // Verification failed
+        const scoreDisplay = typeof score === "number" ? score : "N/A";
+        setVerificationResult({
+          success: false,
+          similarity: typeof score === "number" ? score / 100 : 0,
+          message: `❌ Verification failed. Score: ${scoreDisplay}% (Required: 85%+)`
+        });
+        setStatus(`❌ Verification failed. Score: ${scoreDisplay}%`);
+        setShowRetryOptions(true);
+        setNotificationType("error");
+        setShowNotification(true);
+      }
+    } catch (error) {
+      console.error("Error during face verification:", error);
+      setStatus("❌ Error during verification. Please try again.");
       setVerificationResult({
         success: false,
         similarity: 0,
-        message: "No face detected. Please ensure your face is clearly visible."
+        message: "Error during verification. Check console for details."
       });
-      return;
-    }
-
-    let bestSimilarity = 0;
-    referenceDescriptors.forEach((refDesc) => {
-      const dist = faceapi.euclideanDistance(liveDescriptor, refDesc);
-      const similarity = 1 - Math.min(dist / 2, 1);
-      if (similarity > bestSimilarity) {
-        bestSimilarity = similarity;
-      }
-    });
-
-    const threshold = 0.75;
-    if (bestSimilarity >= threshold) {
-      try {
-        setSubmitting(true);
-        await axios.put(`${BASE_URL}/api/auth/onboarding/${user._id}`, {
-          verified: true
-        });
-
-        // Stop camera before navigating
-        stopCamera();
-        router("/login");
-      } catch (error) {
-        console.error("Error verifying face:", error);
-        setStatus("❌ Error updating verification status.");
-      } finally {
-        setSubmitting(false);
-      }
-
-      setVerificationResult({
-        success: true,
-        similarity: bestSimilarity,
-        message: `Verification successful! Similarity: ${(bestSimilarity * 100).toFixed(1)}%`
-      });
-      setNotificationType("success");
-      setShowNotification(true);
-    } else {
-      setVerificationResult({
-        success: false,
-        similarity: bestSimilarity,
-        message: `Verification failed. Best similarity: ${(bestSimilarity * 100).toFixed(1)}%`
-      });
-      setStatus(`❌ Verification failed. Best similarity: ${(bestSimilarity * 100).toFixed(1)}%`);
       setShowRetryOptions(true);
       setNotificationType("error");
       setShowNotification(true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -284,7 +305,8 @@ const FaceVerification = () => {
   const handleRetry = () => {
     setShowRetryOptions(false);
     setVerificationResult(null);
-    setStatus("Ready to verify. Click 'Verify Face' to try again.");
+    setCapturedSelfie(null);
+    setStatus("✅ Ready to verify. Please capture a new selfie and click 'Verify Face'.");
   };
 
   const handleLeave = () => {
@@ -310,9 +332,33 @@ const FaceVerification = () => {
       
       <div className="flex flex-col items-center border-2 border-primary p-8 rounded-[30px] shadow-lg max-w-md w-full">
         <h1 className="text-2xl font-bold text-center mb-2">Verify your face 👱🏻‍♂️</h1>
-        <p className="text-center text-gray-600 mb-4">Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
+        <p className="text-center text-gray-600 mb-4">Upload your photo and capture a selfie to verify your identity.</p>
         <p className="mb-4 text-sm text-gray-700 text-center">{status}</p>
 
+        {/* User Photo Upload */}
+        <div className="w-full mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            📸 Upload Your Photo
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleUserPhotoUpload}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {userPhoto && (
+            <div className="mt-2">
+              <p className="text-xs text-green-600 mb-1">✅ Photo uploaded</p>
+              <img
+                src={userPhoto}
+                alt="User photo"
+                className="w-24 h-24 rounded-lg object-cover border-2 border-primary"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Camera Video */}
         <div className="relative w-full mb-4 bg-black rounded-[50%]">
           <video
             ref={videoRef}
@@ -338,12 +384,35 @@ const FaceVerification = () => {
           <div className="absolute inset-0 rounded-[50%] border-4 border-dashed border-primary/30 pointer-events-none"></div>
         </div>
 
+        {/* Captured Selfie Preview */}
+        {capturedSelfie && (
+          <div className="w-full mb-4">
+            <p className="text-xs text-green-600 mb-1">✅ Selfie captured</p>
+            <img
+              src={capturedSelfie}
+              alt="Captured selfie"
+              className="w-24 h-24 rounded-lg object-cover border-2 border-primary mx-auto"
+            />
+          </div>
+        )}
+
+        {/* Hidden canvas for capturing */}
+        <canvas ref={canvasRef} style={{ display: "none" }} />
+
         {!showRetryOptions ? (
-          // Normal state - Verify Face button
+          // Normal state - Capture Selfie and Verify Face buttons
           <div className="flex flex-col gap-3 w-full">
             <button
+              onClick={captureSelfie}
+              disabled={submitting || !userPhoto}
+              className="px-5 py-3 bg-blue-500 text-white font-semibold rounded-full hover:opacity-90 transition disabled:opacity-50"
+            >
+              📸 Capture Selfie
+            </button>
+
+            <button
               onClick={handleVerify}
-              disabled={submitting}
+              disabled={submitting || !userPhoto || !capturedSelfie}
               className="px-5 py-3 bg-primary text-white font-semibold rounded-full hover:opacity-90 transition disabled:opacity-50"
             >
               {submitting ? "Verifying..." : "Verify Face"}
@@ -362,7 +431,7 @@ const FaceVerification = () => {
             <div className="text-center mb-2">
               <p className="text-red-600 font-medium">Verification Failed</p>
               <p className="text-sm text-gray-600 mt-1">
-                Similarity: {verificationResult?.similarity ? (verificationResult.similarity * 100).toFixed(1) + '%' : 'N/A'}
+                Score: {verificationResult?.similarity ? (verificationResult.similarity * 100).toFixed(1) + '%' : 'N/A'} (Required: 85%+)
               </p>
             </div>
             
