@@ -54,20 +54,6 @@ function App() {
           <Route path="/forget-password" element={<ForgetPassword />} />
           <Route path="/forget-password/otp" element={<OTP />} />
 
-
-
-
-          <Route path="/video-call" element={<HomePage />} />
-          <Route path="/join" element={<JoinCallPage />} />
-          <Route path="/create" element={<CreateCallPage />} />
-          <Route path="/waiting" element={<WaitingRoomPage />} />
-          <Route path="/call" element={<VideoCallPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-
-
-
-
-
           <Route
             path="/forget-password/reset-password"
             element={<ResetPassword />}
@@ -78,6 +64,13 @@ function App() {
         </Route>
 
         <Route element={<ProtectedRoute />}>
+          <Route path="/video-call" element={<HomePage />} />
+          <Route path="/join" element={<JoinCallPage />} />
+          <Route path="/create" element={<CreateCallPage />} />
+          <Route path="/waiting" element={<WaitingRoomPage />} />
+          <Route path="/call" element={<VideoCallPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+
           <Route
             path="/dashboard"
             element={

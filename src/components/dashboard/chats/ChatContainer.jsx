@@ -9,7 +9,7 @@ import ChatHeader from './ChatHeader'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 
-const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
+const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncomingCall, onGlobalCallAnswered, onGlobalCallRejected }) => {
   const { user: currentUser } = useAuth()
   const { socket, isConnected } = useSocket()
   const navigate = useNavigate()
@@ -422,16 +422,29 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
       }
     }
 
-    // Handle call invitation
+    // Handle call invitation (only if chat is selected and matches the caller)
+    // Global call handling is done in Chats component
     const handleCallInvite = (data) => {
       const { from, callType, channelName, callId } = data
-      setIncomingCall({
-        from,
-        callType,
-        channelName,
-        callId
-      })
-      setCallState('ringing')
+      
+      // Only handle if this is for the currently selected chat
+      if (selectedChat) {
+        const callerId = from?.toString()
+        const isCallerInChat = selectedChat.participants?.some(p => {
+          const participantId = p._id?.toString() || p?.toString()
+          return participantId === callerId
+        })
+        
+        if (isCallerInChat) {
+          setIncomingCall({
+            from,
+            callType,
+            channelName,
+            callId
+          })
+          setCallState('ringing')
+        }
+      }
     }
 
     // Handle call response
@@ -652,9 +665,9 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent }) => {
         otherParticipant={otherParticipant}
         callState={callState}
         onInitiateCall={initiateCall}
-        incomingCall={incomingCall}
-        onAnswerCall={answerCall}
-        onRejectCall={rejectCall}
+        incomingCall={globalIncomingCall || incomingCall}
+        onAnswerCall={onGlobalCallAnswered || answerCall}
+        onRejectCall={onGlobalCallRejected || rejectCall}
       />
 
       <MessageList

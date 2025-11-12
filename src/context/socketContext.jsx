@@ -23,12 +23,22 @@ export const SocketProvider = ({ children }) => {
       return
     }
 
+    // Clean up existing connection before creating new one
+    if (socketRef.current) {
+      console.log('Cleaning up existing socket connection')
+      socketRef.current.removeAllListeners()
+      socketRef.current.disconnect()
+      socketRef.current = null
+    }
+
     // Initialize socket connection
     const socket = io(BASE_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 5,
+      forceNew: false, // Reuse connection if possible
+      autoConnect: true
     })
 
     socketRef.current = socket
@@ -62,6 +72,13 @@ export const SocketProvider = ({ children }) => {
         newSet.delete(userId)
         return newSet
       })
+    })
+
+    // Receive initial list of online users when connecting
+    socket.on('users:online', ({ users }) => {
+      if (Array.isArray(users)) {
+        setOnlineUsers(new Set(users))
+      }
     })
 
     // Cleanup on unmount

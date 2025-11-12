@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/dashboard/chats/Sidebar'
 import ChatContainer from '../../components/dashboard/chats/ChatContainer'
 import { useAuth } from '../../context/authContext'
@@ -10,11 +10,14 @@ import Loader from '../../components/common/Loader'
 
 const Chats = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user: currentUser } = useAuth()
-  const { onlineUsers } = useSocket()
+  const { onlineUsers, socket, isConnected } = useSocket()
   const [chats, setChats] = useState([])
   const [selectedChat, setSelectedChat] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [globalIncomingCall, setGlobalIncomingCall] = useState(null)
+  const incomingCallChatRef = useRef(null)
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -150,12 +153,207 @@ const Chats = () => {
     }
   }
 
+  // Global call invitation handler - works even when no chat is selected
+  useEffect(() => {
+    if (!socket || !isConnected || !currentUser?._id) return
+
+    const handleGlobalCallInvite = async (data) => {
+      const { from, callType, channelName, callId } = data
+      
+      // Find the chat with the caller
+      const callerId = from?.toString()
+      const chatWithCaller = chats.find(chat => 
+        chat.participants?.some(p => {
+          const participantId = p._id?.toString() || p?.toString()
+          return participantId === callerId
+        })
+      )
+
+      if (chatWithCaller) {
+        // Store the chat for the call
+        incomingCallChatRef.current = chatWithCaller
+        // Select the chat so the call UI can show
+        setSelectedChat(chatWithCaller)
+        // Set global incoming call state
+        setGlobalIncomingCall({
+          from,
+          callType,
+          channelName,
+          callId
+        })
+      } else {
+        // If no chat found, still show notification but we need to create/find chat
+        console.warn('Call from user without existing chat:', callerId)
+        setGlobalIncomingCall({
+          from,
+          callType,
+          channelName,
+          callId
+        })
+      }
+    }
+
+    socket.on('call:invite', handleGlobalCallInvite)
+
+    return () => {
+      socket.off('call:invite', handleGlobalCallInvite)
+    }
+  }, [socket, isConnected, currentUser?._id, chats])
+
+  // Handle answering global incoming call
+  const handleAnswerGlobalCall = useCallback(async () => {
+    if (!globalIncomingCall) return
+
+    try {
+      const chat = incomingCallChatRef.current || selectedChat
+      if (!chat) {
+        console.error('No chat found for call')
+        return
+      }
+
+      // Get the other participant
+      const otherParticipant = chat.participants?.find(p => {
+        const participantId = p._id?.toString() || p?.toString()
+        const callerId = globalIncomingCall.from?.toString()
+        return participantId === callerId
+      })
+
+      if (!otherParticipant) {
+        console.error('Other participant not found')
+        return
+      }
+
+      // Generate token for RTC
+      const tokenResponse = await axios.post(`${BASE_URL}/generate-token`, {
+        channelName: globalIncomingCall.channelName,
+        uid: currentUser._id.toString()
+      })
+
+      const callData = {
+        channelName: globalIncomingCall.channelName,
+        uid: currentUser._id.toString(),
+        token: tokenResponse.data.token,
+        callType: globalIncomingCall.callType,
+        otherParticipant: otherParticipant,
+        chatId: chat._id
+      }
+
+      // Send call response
+      if (socket && isConnected) {
+        socket.emit('call:response', {
+          toUserId: globalIncomingCall.from?.toString(),
+          responseType: 'call_answer',
+          callData: {
+            callId: globalIncomingCall.callId,
+            channelName: globalIncomingCall.channelName,
+            callType: globalIncomingCall.callType
+          }
+        })
+      }
+
+      // Navigate to call page
+      navigate('/call', { state: callData })
+      setGlobalIncomingCall(null)
+      incomingCallChatRef.current = null
+    } catch (error) {
+      console.error('Error answering call:', error)
+      alert('Failed to answer call. Please try again.')
+    }
+  }, [globalIncomingCall, selectedChat, currentUser, socket, isConnected, navigate])
+
+  // Handle rejecting global incoming call
+  const handleRejectGlobalCall = useCallback(() => {
+    if (!globalIncomingCall || !socket || !isConnected) {
+      setGlobalIncomingCall(null)
+      incomingCallChatRef.current = null
+      return
+    }
+
+    try {
+      socket.emit('call:response', {
+        toUserId: globalIncomingCall.from?.toString(),
+        responseType: 'call_reject',
+        callData: {
+          callId: globalIncomingCall.callId,
+          channelName: globalIncomingCall.channelName,
+          callType: globalIncomingCall.callType
+        }
+      })
+    } catch (error) {
+      console.error('Error rejecting call:', error)
+    } finally {
+      setGlobalIncomingCall(null)
+      incomingCallChatRef.current = null
+    }
+  }, [globalIncomingCall, socket, isConnected])
+
   if (loading) {
     return <Loader />
   }
 
+  // Get caller info for global call notification
+  const getCallerInfo = () => {
+    if (!globalIncomingCall) return null
+    
+    const callerId = globalIncomingCall.from?.toString()
+    const chat = incomingCallChatRef.current || chats.find(chat => 
+      chat.participants?.some(p => {
+        const participantId = p._id?.toString() || p?.toString()
+        return participantId === callerId
+      })
+    )
+    
+    if (chat) {
+      const caller = chat.participants?.find(p => {
+        const participantId = p._id?.toString() || p?.toString()
+        return participantId === callerId
+      })
+      return caller
+    }
+    return null
+  }
+
+  const callerInfo = getCallerInfo()
+
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-1rem)] md:h-[calc(100vh-2rem)] m-2 md:m-4 shadow-lg rounded-[20px] md:rounded-[30px] overflow-hidden bg-white">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-1rem)] md:h-[calc(100vh-2rem)] m-2 md:m-4 shadow-lg rounded-[20px] md:rounded-[30px] overflow-hidden bg-white relative">
+      {/* Global Call Notification - shows even when no chat is selected */}
+      {globalIncomingCall && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 md:p-8 shadow-2xl max-w-md w-full mx-4 text-center">
+            <div className="mb-6">
+              <img
+                src={callerInfo?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"}
+                alt={callerInfo?.username || "User"}
+                className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-primary"
+              />
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                {globalIncomingCall.callType === 'video' ? '📹 Video' : '📞 Audio'} Call
+              </h3>
+              <p className="text-lg text-gray-600">
+                {callerInfo?.username || 'Unknown User'} is calling...
+              </p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={handleRejectGlobalCall}
+                className="px-6 py-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors flex items-center gap-2"
+              >
+                <span className="text-xl">📞</span>
+                Decline
+              </button>
+              <button
+                onClick={handleAnswerGlobalCall}
+                className="px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors flex items-center gap-2"
+              >
+                <span className="text-xl">📞</span>
+                Answer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Sidebar 
         users={sortedUsers} 
         selectedUser={selectedChat}
@@ -165,6 +363,9 @@ const Chats = () => {
         selectedChat={selectedChat}
         currentUserId={currentUser?._id}
         onMessageSent={updateChatLastMessage}
+        globalIncomingCall={globalIncomingCall}
+        onGlobalCallAnswered={handleAnswerGlobalCall}
+        onGlobalCallRejected={handleRejectGlobalCall}
       />
     </div>
   )

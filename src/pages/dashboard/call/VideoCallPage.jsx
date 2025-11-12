@@ -232,10 +232,10 @@ const VideoCallPage = () => {
         joinedRef.current = false;
       }
       // Navigate back to chats
-      navigate("/chats");
+      navigate("/dashboard/chats");
     } catch (error) {
       console.error("Leave call error:", error);
-      navigate("/chats");
+      navigate("/dashboard/chats");
     }
   };
 
@@ -246,7 +246,7 @@ const VideoCallPage = () => {
         <div className="text-center">
           <p className="text-xl mb-4">No call data found</p>
           <button
-            onClick={() => navigate('/chats')}
+            onClick={() => navigate('/dashboard/chats')}
             className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
           >
             Go Back to Chats
