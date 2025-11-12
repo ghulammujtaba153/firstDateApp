@@ -307,12 +307,32 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
 
   // Navigate to call page (defined first to avoid hoisting issues)
   const navigateToCall = React.useCallback(async (channelName, callType, isAnswer = false) => {
+    console.log("\n" + "=".repeat(60));
+    console.log("🚀 navigateToCall() - Preparing call navigation");
+    console.log("=".repeat(60));
+    console.log("  - Channel Name:", channelName);
+    console.log("  - Call Type:", callType);
+    console.log("  - Is Answer:", isAnswer);
+    console.log("  - Current User ID:", currentUser._id);
+    console.log("  - Other Participant:", otherParticipant);
+    console.log("  - Chat ID:", selectedChat?._id);
+    
     try {
       // Generate token for RTC
+      console.log("  - Generating Agora token...");
+      console.log("    - Endpoint:", `${BASE_URL}/generate-token`);
+      console.log("    - Channel Name:", channelName);
+      console.log("    - UID:", currentUser._id.toString());
+      
       const tokenResponse = await axios.post(`${BASE_URL}/generate-token`, {
         channelName: channelName,
         uid: currentUser._id.toString()
       })
+
+      console.log("  ✅ Token generated successfully");
+      console.log("    - Token length:", tokenResponse.data.token?.length || 0);
+      console.log("    - Token UID:", tokenResponse.data.uid);
+      console.log("    - Token Channel:", tokenResponse.data.channelName);
 
       const callData = {
         channelName: channelName,
@@ -323,22 +343,56 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
         chatId: selectedChat?._id
       }
 
+      console.log("\n  📤 Navigating to /call with callData:");
+      console.log("    - Channel Name:", callData.channelName);
+      console.log("    - UID:", callData.uid);
+      console.log("    - Call Type:", callData.callType);
+      console.log("    - Other Participant ID:", callData.otherParticipant?._id);
+      console.log("    - Other Participant Username:", callData.otherParticipant?.username);
+      console.log("    - Chat ID:", callData.chatId);
+      console.log("    - Token:", callData.token ? "✅ Present" : "❌ Missing");
+      
       navigate('/call', { state: callData })
+      console.log("  ✅ Navigation completed");
     } catch (error) {
-      console.error('Error initiating call:', error)
+      console.error("\n" + "=".repeat(60));
+      console.error("❌ ERROR: navigateToCall failed");
+      console.error("=".repeat(60));
+      console.error("  - Error message:", error.message);
+      console.error("  - Error stack:", error.stack);
+      console.error("  - Channel Name:", channelName);
+      console.error("  - UID:", currentUser._id);
       alert('Failed to start call. Please try again.')
     }
   }, [currentUser._id, otherParticipant, selectedChat?._id, navigate])
 
   // Initiate call (audio or video)
   const initiateCall = React.useCallback(async (callType) => {
+    console.log("\n" + "=".repeat(60));
+    console.log("📞 USER ACTION: Initiate Call");
+    console.log("=".repeat(60));
+    console.log("  - Call Type:", callType);
+    console.log("  - Caller (Current User):");
+    console.log("    - ID:", currentUser?._id);
+    console.log("    - Username:", currentUser?.username);
+    console.log("  - Selected Chat ID:", selectedChat?._id);
+    console.log("  - Other Participant:");
+    console.log("    - ID:", otherParticipant?._id);
+    console.log("    - Username:", otherParticipant?.username);
+    console.log("  - Timestamp:", new Date().toISOString());
+
     if (!selectedChat?._id || !otherParticipant?._id) {
+      console.error("  ❌ Missing required data:");
+      console.error("    - selectedChat?._id:", selectedChat?._id);
+      console.error("    - otherParticipant?._id:", otherParticipant?._id);
       alert('Unable to start call. Please select a chat first.')
       return
     }
 
     // Check if Agora is configured
     const appId = import.meta.env.VITE_AGORA_APP_ID
+    console.log("  - Agora APP_ID:", appId ? "✅ Configured" : "❌ Missing");
+    
     if (!appId) {
       alert('Agora is not configured. Please set VITE_AGORA_APP_ID in your .env file.')
       return
@@ -346,22 +400,46 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
 
     try {
       setCallState('calling')
+      console.log("  - Call State: calling");
+      
       // Use same channel naming pattern as chat (user1_user2) for calls
       const callChannelName = getChannelName ? `call_${getChannelName.replace('chat_', '')}` : `call_${selectedChat._id}_${Date.now()}`
       const callId = `${currentUser._id}_${Date.now()}`
+      
+      console.log("  - Generated Call Details:");
+      console.log("    - Channel Name:", callChannelName);
+      console.log("    - Call ID:", callId);
+      console.log("    - Base Channel Name:", getChannelName);
       
       // Try to send call invitation via Socket.io in background (non-blocking)
       // Socket.io is optional - RTC calls work independently
       // Socket.io is only used for call notifications, not for the actual call
       if (sendCallInvitation) {
+        console.log("  - Sending call invitation via Socket.io...");
         sendCallInvitation(callType, callChannelName, callId)
+        console.log("  ✅ Call invitation sent");
+      } else {
+        console.warn("  ⚠️ sendCallInvitation function not available");
       }
       
       // Navigate to call page immediately
       // Agora RTC works independently - doesn't require Socket.io
+      console.log("  - Navigating to call page...");
+      console.log("  - Call Data to pass:", {
+        channelName: callChannelName,
+        callType,
+        otherParticipant,
+        chatId: selectedChat._id
+      });
       navigateToCall(callChannelName, callType, false)
+      console.log("  ✅ Navigation initiated");
     } catch (error) {
-      console.error('Error initiating call:', error)
+      console.error("\n" + "=".repeat(60));
+      console.error("❌ ERROR: Failed to initiate call");
+      console.error("=".repeat(60));
+      console.error("  - Error message:", error.message);
+      console.error("  - Error stack:", error.stack);
+      console.error("  - Call Type:", callType);
       setCallState(null)
       // Only show error for critical failures
       if (error.message && error.message.includes('Agora')) {
