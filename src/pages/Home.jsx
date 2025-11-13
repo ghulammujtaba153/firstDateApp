@@ -10,16 +10,9 @@ import Loader from './../components/common/Loader';
 
 
 const data = [
+  
   {
     id: 1,
-    title: "Do you want to join this week’s date?",
-    description:
-      "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
-    linkText: "Yes, Find me a date",
-    link: "/profile/johndoe",
-  },
-  {
-    id: 2,
     title: "Join our Speed Dating Event this Sunday!",
     description:
       "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
@@ -28,44 +21,7 @@ const data = [
   },
 ];
 
-const matchData = [
-  {
-    id: 1,
-    name: "John Doe",
-    isVerified: true, 
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" ,
-    distance: "2 miles away",
 
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    isVerified: true,
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" ,
-    distance: "2 miles away",
-  },
-  {
-    id: 3,
-    name: "Jane Smith",
-    isVerified: true,
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" ,
-    distance: "2 miles away",
-  },
-  {
-    id: 4,
-    name: "Jane Smith",
-    isVerified: true,
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" ,
-    distance: "2 miles away",
-  },
-  {
-    id: 5,
-    name: "Jane Smith",
-    isVerified: false,
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face" ,
-    distance: "2 miles away",
-  },
-];
 
 const Home = () => {
   const [matches, setMatches] = useState(data);
@@ -96,7 +52,7 @@ const Home = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 md:grid-cols-2  gap-6">
+      <div className="grid grid-cols-1   gap-6">
         {data.map((item) => (
           <StickerCard item={item} key={item.id} />
         ))}
