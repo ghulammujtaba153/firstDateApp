@@ -65,22 +65,50 @@ const Subscription = () => {
     const sessionId = searchParams.get('session_id')
 
     if (success === 'true' && sessionId) {
-      setMessage('Subscription successful! Your premium features are now active.')
-      // Refresh user data to get updated premium status
-      if (user?._id) {
-        fetchUserSubscription()
-      }
+      // Verify the checkout session and process subscription
+      verifyCheckoutSession(sessionId)
     } else if (canceled === 'true') {
       setMessage('Subscription was canceled.')
-    }
-
-    // Fetch current subscription status
-    if (user?._id) {
-      fetchUserSubscription()
-    } else {
       setLoading(false)
+    } else {
+      // Fetch current subscription status
+      if (user?._id) {
+        fetchUserSubscription()
+      } else {
+        setLoading(false)
+      }
     }
   }, [user, searchParams])
+
+  const verifyCheckoutSession = async (sessionId) => {
+    try {
+      setLoading(true)
+      setMessage('Verifying your subscription...')
+      
+      const response = await axios.post(`${BASE_URL}/api/app-subscriptions/verify-session`, {
+        sessionId
+      })
+
+      if (response.data.success) {
+        setMessage('Subscription successful! Your premium features are now active.')
+        // Refresh user data to get updated premium status
+        if (user?._id) {
+          await fetchUserSubscription()
+        }
+      } else {
+        setMessage('Subscription verification failed. Please contact support.')
+      }
+    } catch (error) {
+      console.error('Error verifying checkout session:', error)
+      setMessage('Subscription verification failed. Please contact support if the payment was successful.')
+      // Still try to fetch subscription status in case webhook processed it
+      if (user?._id) {
+        await fetchUserSubscription()
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchUserSubscription = async () => {
     try {

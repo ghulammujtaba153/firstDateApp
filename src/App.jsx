@@ -31,6 +31,7 @@ import UserRoutes from "./components/UserRoutes";
 import GoogleAuth from "./pages/GoogleAuth";
 import FreeScreenProtectedRoutes from "./components/FreeScreenProtectedRoutes";
 import FaceTryVerification from "./pages/FaceTryVerification";
+import Support from "./pages/dashboard/Support";
 
 function App() {
   return (
@@ -154,6 +155,16 @@ function App() {
             element={
               <DashboardLayout>
                 <Subscription />
+              </DashboardLayout>
+            }
+          />
+
+
+<Route
+            path="/dashboard/support"
+            element={
+              <DashboardLayout>
+                <Support />
               </DashboardLayout>
             }
           />
