@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import MatchCard from '../../components/dashboard/home/MatchCard';
+import MatchRefreshTimer from '../../components/dashboard/home/MatchRefreshTimer';
 import { FaArrowRight, FaSearch, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import Loader from '../../components/common/Loader';
@@ -10,6 +11,7 @@ import axios from 'axios';
 const ITEMS_PER_PAGE = 8; // 2 rows * 4 columns per row
 
 const Matches = () => {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [matches, setMatches] = useState([]);
@@ -20,11 +22,17 @@ const Matches = () => {
     try {
       setLoading(true);
       setError("");
-      const res = await axios.get(`${BASE_URL}/api/user-dashboard/get`);
+      const userId = user?._id || user?.id;
+      const res = await axios.get(`${BASE_URL}/api/user-dashboard/get`, {
+        params: userId ? { userId } : {}
+      });
       console.log("Fetched matches:", res.data);
       
+      // Handle new response format with timer data
+      const usersData = res.data.users || res.data;
+      
       // Ensure we have an array and add unique IDs if missing
-      const matchesWithIds = Array.isArray(res.data) ? res.data.map((match, index) => ({
+      const matchesWithIds = Array.isArray(usersData) ? usersData.map((match, index) => ({
         ...match,
         id: match.id || match._id || `match-${index}` // Fallback ID
       })) : [];
@@ -36,6 +44,21 @@ const Matches = () => {
       setMatches([]); // Reset to empty array on error
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle timer completion - refresh matches with new data
+  const handleTimerComplete = (newMatches) => {
+    if (newMatches && Array.isArray(newMatches)) {
+      const matchesWithIds = newMatches.map((match, index) => ({
+        ...match,
+        id: match.id || match._id || `match-${index}`
+      }));
+      setMatches(matchesWithIds);
+      setPage(1); // Reset to first page
+    } else {
+      // If no matches provided, refetch
+      fetchMatches();
     }
   };
 
@@ -133,6 +156,14 @@ const Matches = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Timer Section */}
+      {user && (
+        <MatchRefreshTimer 
+          userId={user._id || user.id} 
+          onTimerComplete={handleTimerComplete}
+        />
+      )}
+
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>

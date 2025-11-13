@@ -484,12 +484,12 @@ const VideoCallPage = () => {
   // UI
   if (!callData) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-[#202124] text-white">
         <div className="text-center">
-          <p className="text-xl mb-4">No call data found</p>
+          <p className="text-xl mb-4 text-gray-300">No call data found</p>
           <button
             onClick={() => navigate('/dashboard/chats')}
-            className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+            className="px-6 py-2.5 bg-[#1a73e8] rounded-lg hover:bg-[#1765cc] transition-colors text-sm font-medium"
           >
             Go Back to Chats
           </button>
@@ -500,143 +500,216 @@ const VideoCallPage = () => {
 
   const callType = callData?.callType || 'video';
   const otherParticipant = callData?.otherParticipant;
+  const participantName = otherParticipant?.username || 'Unknown User';
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-900 text-white p-4">
-      <div className="flex items-center justify-between w-full max-w-6xl mb-4">
-        <h1 className="text-xl font-bold">
-          {callType === 'video' ? '📹 Video' : '📞 Audio'} Call
-        </h1>
-        {otherParticipant && (
-          <p className="text-lg text-gray-300">
-            {otherParticipant.username || 'Unknown User'}
-          </p>
+    <div className="relative min-h-screen bg-[#202124] text-white overflow-hidden">
+      {/* Top Bar - Minimal like Google Meet */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-3 bg-black/30 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#1a73e8] flex items-center justify-center">
+            <span className="text-sm font-semibold">
+              {participantName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">
+              {remoteUserJoined ? participantName : 'Connecting...'}
+            </p>
+            {connectionStatus === "connected" && (
+              <p className="text-xs text-gray-400">
+                {remoteUserJoined ? 'Connected' : 'Waiting for participant'}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        {connectionStatus === "connecting" && (
+          <div className="flex items-center gap-2 text-sm text-gray-300">
+            <div className="w-2 h-2 bg-[#1a73e8] rounded-full animate-pulse"></div>
+            <span>Connecting...</span>
+          </div>
         )}
       </div>
 
-      {connectionStatus === "connecting" && !tracksReady && (
-        <div className="text-yellow-400 mb-4">🔄 Connecting to call...</div>
-      )}
+      {/* Main Video Area - Full Screen */}
+      <div className="relative w-full h-screen flex items-center justify-center bg-[#1a1a1a]">
+        {/* Remote Video/Audio - Main Display */}
+        <div className="relative w-full h-full flex items-center justify-center">
+          {callType === 'video' ? (
+            <div
+              ref={remoteVideoRef}
+              className="absolute inset-0 w-full h-full bg-[#1a1a1a]"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center w-full h-full">
+              {remoteUserJoined ? (
+                <>
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#4285f4] flex items-center justify-center mb-6 shadow-2xl">
+                    <span className="text-5xl font-semibold text-white">
+                      {participantName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-2xl font-medium text-gray-200 mb-2">{participantName}</p>
+                  <p className="text-sm text-gray-400">Audio call</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center mb-6 animate-pulse">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <p className="text-lg text-gray-400">Waiting for participant...</p>
+                </>
+              )}
+            </div>
+          )}
 
-      {errorMessage && connectionStatus !== "error" && (
-        <div className="text-yellow-400 mb-4 text-sm">
-          ⚠️ {errorMessage}
+          {/* Waiting State Overlay for Video */}
+          {callType === 'video' && !remoteUserJoined && connectionStatus === "connected" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1a1a]">
+              <div className="w-24 h-24 rounded-full bg-gray-700 flex items-center justify-center mb-4 animate-pulse">
+                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <p className="text-lg text-gray-400">{participantName}</p>
+              <p className="text-sm text-gray-500 mt-1">Waiting for participant to join...</p>
+            </div>
+          )}
+
+          {/* Connecting State */}
+          {connectionStatus === "connecting" && !tracksReady && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1a1a]">
+              <div className="w-16 h-16 border-4 border-[#1a73e8] border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-400">Connecting to call...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {connectionStatus === "error" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1a1a]">
+              <div className="text-center max-w-md px-6">
+                <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <p className="text-xl font-medium text-white mb-2">Connection Failed</p>
+                <p className="text-sm text-gray-400 mb-6">{errorMessage || "Unable to connect to the call"}</p>
+                <div className="flex gap-3 justify-center">
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="px-5 py-2.5 bg-[#1a73e8] rounded-lg hover:bg-[#1765cc] transition-colors text-sm font-medium"
+                  >
+                    Retry
+                  </button>
+                  <button 
+                    onClick={() => navigate('/dashboard/chats')}
+                    className="px-5 py-2.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                  >
+                    Go Back
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Warning Message */}
+          {errorMessage && connectionStatus !== "error" && (
+            <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30">
+              <div className="bg-yellow-500/90 text-black px-4 py-2 rounded-lg text-sm font-medium backdrop-blur-sm">
+                ⚠️ {errorMessage}
+              </div>
+            </div>
+          )}
         </div>
-      )}
 
-      {connectionStatus === "connected" && !remoteUserJoined && (
-        <div className="text-blue-400 mb-4 text-center">
-          <div className="animate-pulse">⏳ Waiting for other user to join...</div>
-        </div>
-      )}
-
-      {connectionStatus === "error" && (
-        <div className="text-red-500 mb-4 text-center">
-          <p className="mb-2">❌ {errorMessage || "Connection Failed"}</p>
-          <div className="flex gap-2 justify-center">
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-            >
-              Retry
-            </button>
-            <button 
-              onClick={() => navigate('/dashboard/chats')}
-              className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      )}
-
-      {connectionStatus !== "error" && (
-        <>
-          <div className="flex flex-wrap justify-center gap-6 mb-6">
-            {/* Local Video/Audio */}
-            {callType === 'video' && (
-              <div className="flex flex-col items-center">
-                <div
-                  ref={localVideoRef}
-                  className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden relative"
-                />
-                <p className="text-sm text-gray-400 mt-2">You</p>
+        {/* Local Video Preview - Bottom Right (Google Meet Style) */}
+        {callType === 'video' && tracksReady && localTracks.current.cam && (
+          <div className="absolute bottom-24 right-6 z-30 w-48 h-36 rounded-lg overflow-hidden shadow-2xl border-2 border-white/20 bg-black">
+            <div
+              ref={localVideoRef}
+              className="w-full h-full bg-[#1a1a1a]"
+            />
+            {!cameraEnabled && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
               </div>
             )}
-
-            {/* Remote Video/Audio */}
-            <div className="flex flex-col items-center">
-              {callType === 'video' ? (
-                <div
-                  ref={remoteVideoRef}
-                  className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-gray-600 overflow-hidden relative flex items-center justify-center"
-                >
-                  {!remoteUserJoined && connectionStatus === "connected" && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="animate-pulse text-center">
-                        <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <span className="text-3xl">👤</span>
-                        </div>
-                        <p className="text-gray-400 text-sm">Waiting for user...</p>
-                      </div>
-                    </div>
-                  )}
-                  {!tracksReady && connectionStatus === "connecting" && (
-                    <p className="text-gray-400">Connecting...</p>
-                  )}
-                </div>
-              ) : (
-                <div className="w-72 h-52 bg-gray-800 rounded-lg border-2 border-gray-600 overflow-hidden relative flex items-center justify-center">
-                  {!remoteUserJoined && connectionStatus === "connected" ? (
-                    <div className="text-center">
-                      <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                        <span className="text-4xl">⏳</span>
-                      </div>
-                      <p className="text-gray-400">Waiting for user...</p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-4xl">📞</span>
-                      </div>
-                      <p className="text-gray-400">Audio Call</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              <p className="text-sm text-gray-400 mt-2">
-                {remoteUserJoined && otherParticipant?.username 
-                  ? otherParticipant.username 
-                  : remoteUserJoined 
-                    ? 'Remote User' 
-                    : 'Waiting for user...'}
-              </p>
+            <div className="absolute bottom-1 left-1 px-2 py-0.5 bg-black/50 rounded text-xs text-white backdrop-blur-sm">
+              You
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Controls */}
-          <div className="flex space-x-4">
-            <button 
-              onClick={toggleMic} 
-              className={`px-4 py-2 rounded ${micEnabled ? 'bg-blue-600' : 'bg-gray-600'}`}
+      {/* Control Bar - Bottom Center (Google Meet Style) */}
+      {connectionStatus !== "error" && (
+        <div className="absolute bottom-0 left-0 right-0 z-30 flex items-center justify-center pb-6">
+          <div className="flex items-center gap-2 bg-black/70 backdrop-blur-md rounded-full px-4 py-3 shadow-2xl">
+            {/* Mic Toggle */}
+            <button
+              onClick={toggleMic}
               disabled={!localTracks.current.mic}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                micEnabled
+                  ? 'bg-white hover:bg-gray-100'
+                  : 'bg-red-500 hover:bg-red-600'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title={micEnabled ? 'Turn off microphone' : 'Turn on microphone'}
             >
-              {micEnabled ? "🎤 Mic On" : "🔇 Mic Off"}
+              {micEnabled ? (
+                <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                </svg>
+              )}
             </button>
+
+            {/* Camera Toggle (Video Calls Only) */}
             {callType === 'video' && (
               <button
                 onClick={toggleCamera}
-                className={`px-4 py-2 rounded ${cameraEnabled ? 'bg-blue-600' : 'bg-gray-600'}`}
                 disabled={!localTracks.current.cam}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                  cameraEnabled
+                    ? 'bg-white hover:bg-gray-100'
+                    : 'bg-red-500 hover:bg-red-600'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
               >
-                {cameraEnabled ? "📹 Camera On" : "📷 Camera Off"}
+                {cameraEnabled ? (
+                  <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                )}
               </button>
             )}
-            <button onClick={leaveCall} className="px-4 py-2 bg-red-600 rounded hover:bg-red-700">
-              📞 Leave
+
+            {/* Leave Call Button */}
+            <button
+              onClick={leaveCall}
+              className="w-12 h-12 rounded-full flex items-center justify-center bg-red-600 hover:bg-red-700 transition-colors"
+              title="Leave call"
+            >
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8l-8 8m0-8l8 8" />
+              </svg>
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
