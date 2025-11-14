@@ -28,6 +28,16 @@ const Chats = () => {
         const response = await axios.get(`${BASE_URL}/api/chat/user/${currentUser._id}`)
         setChats(response.data || [])
 
+        // Join all chat rooms for real-time message delivery
+        if (socket && isConnected && response.data) {
+          response.data.forEach(chat => {
+            if (chat._id) {
+              socket.emit('chat:join', { chatId: chat._id })
+              console.log(`Joined chat room for real-time updates: ${chat._id}`)
+            }
+          })
+        }
+
         // If navigating from MatchDetail with a chatId, select that chat
         if (location.state?.chatId) {
           const chat = response.data.find(c => c._id === location.state.chatId)
@@ -52,7 +62,7 @@ const Chats = () => {
     }
 
     fetchChats()
-  }, [currentUser?._id, location.state])
+  }, [currentUser?._id, location.state, socket, isConnected])
 
   // Online status is now handled by Socket.io context
   // No need for separate presence tracking - Socket.io handles it automatically
@@ -82,6 +92,31 @@ const Chats = () => {
     })
   }, [])
 
+  // Update unread count when messages are marked as read
+  const updateUnreadCount = useCallback((chatId) => {
+    setChats(prevChats => {
+      return prevChats.map(chat => {
+        if (chat._id === chatId) {
+          return {
+            ...chat,
+            unreadCount: 0
+          }
+        }
+        return chat
+      })
+    })
+    // Update selectedChat if it's the current chat
+    setSelectedChat(prevSelected => {
+      if (prevSelected?._id === chatId) {
+        return {
+          ...prevSelected,
+          unreadCount: 0
+        }
+      }
+      return prevSelected
+    })
+  }, [])
+
   // Transform chats data for Sidebar
   const users = chats.map(chat => {
     // Get the other participant (not current user)
@@ -93,13 +128,12 @@ const Chats = () => {
       }
     ) || chat.participants?.[0]
 
-    // Determine if there's an unread message (message not sent by current user)
-    const lastMessage = chat.lastMessage
-    const hasUnread = lastMessage && 
-      (lastMessage.sender?._id?.toString() !== currentUser?._id?.toString() && 
-       lastMessage.sender?.toString() !== currentUser?._id?.toString())
+    // Get unread count from chat object (set by backend)
+    const unreadCount = chat.unreadCount || 0
+    const hasUnread = unreadCount > 0
 
     // Format last message text
+    const lastMessage = chat.lastMessage
     let lastMessageText = "No messages yet"
     if (lastMessage) {
       if (lastMessage.messageType === 'image') {
@@ -130,6 +164,7 @@ const Chats = () => {
       online: isOnline,
       lastMessage: lastMessageText,
       hasUnread: hasUnread,
+      unreadCount: unreadCount,
       lastMessageTime: lastMessage?.timestamp || chat.createdAt,
     }
   })
@@ -152,6 +187,44 @@ const Chats = () => {
       setSelectedChat(chat)
     }
   }
+
+  // Listen for new messages globally to update chat list
+  useEffect(() => {
+    if (!socket || !isConnected) return
+
+    const handleGlobalNewMessage = (data) => {
+      const { chatId, message } = data
+      
+      if (!chatId || !message) return
+
+      // Update the chat's last message in the list
+      updateChatLastMessage(chatId, message)
+      
+      // Refresh unread count if message is not from current user
+      const messageSenderId = message.sender?._id?.toString() || message.sender?.toString()
+      const currentUserIdStr = currentUser?._id?.toString()
+      if (messageSenderId !== currentUserIdStr) {
+        // Increment unread count for this chat
+        setChats(prevChats => {
+          return prevChats.map(chat => {
+            if (chat._id === chatId) {
+              return {
+                ...chat,
+                unreadCount: (chat.unreadCount || 0) + 1
+              }
+            }
+            return chat
+          })
+        })
+      }
+    }
+
+    socket.on('message:new', handleGlobalNewMessage)
+
+    return () => {
+      socket.off('message:new', handleGlobalNewMessage)
+    }
+  }, [socket, isConnected, currentUser?._id, updateChatLastMessage])
 
   // Global call invitation handler - works even when no chat is selected
   useEffect(() => {
@@ -221,6 +294,23 @@ const Chats = () => {
       if (!otherParticipant) {
         console.error('Other participant not found')
         return
+      }
+
+      // Create call message in chat when answering
+      try {
+        const callText = globalIncomingCall.callType === 'video' ? 'Video call' : 'Audio call'
+        await axios.post(`${BASE_URL}/api/chat/message`, {
+          chatId: chat._id,
+          sender: currentUser._id,
+          content: `${callText} received`,
+          messageType: globalIncomingCall.callType === 'video' ? 'videoCall' : 'audioCall'
+        })
+        // Refresh chats to update last message
+        const response = await axios.get(`${BASE_URL}/api/chat/user/${currentUser._id}`)
+        setChats(response.data || [])
+      } catch (error) {
+        console.error('Error creating call message:', error)
+        // Don't block call if message creation fails
       }
 
       // Generate token for RTC
@@ -363,6 +453,7 @@ const Chats = () => {
         selectedChat={selectedChat}
         currentUserId={currentUser?._id}
         onMessageSent={updateChatLastMessage}
+        onMessagesRead={updateUnreadCount}
         globalIncomingCall={globalIncomingCall}
         onGlobalCallAnswered={handleAnswerGlobalCall}
         onGlobalCallRejected={handleRejectGlobalCall}

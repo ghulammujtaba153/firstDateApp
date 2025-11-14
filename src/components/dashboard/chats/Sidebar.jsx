@@ -72,8 +72,10 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
               <div className="flex flex-col flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <span className="font-medium truncate text-sm md:text-base">{user.name}</span>
-                  {user.hasUnread && (
-                    <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></span>
+                  {user.unreadCount > 0 && (
+                    <span className="bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 min-w-[20px] text-center">
+                      {user.unreadCount > 99 ? '99+' : user.unreadCount}
+                    </span>
                   )}
                 </div>
                 <span className={`text-xs truncate ${selectedUser?.id === user.id || selectedUser?._id === user.chatId ? "text-white/80" : "text-gray-500"}`}>

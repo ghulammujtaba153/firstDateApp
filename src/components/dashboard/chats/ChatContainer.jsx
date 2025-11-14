@@ -9,7 +9,7 @@ import ChatHeader from './ChatHeader'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 
-const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncomingCall, onGlobalCallAnswered, onGlobalCallRejected }) => {
+const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesRead, globalIncomingCall, onGlobalCallAnswered, onGlobalCallRejected }) => {
   const { user: currentUser } = useAuth()
   const { socket, isConnected } = useSocket()
   const navigate = useNavigate()
@@ -147,6 +147,45 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
 
     fetchMessages()
   }, [selectedChat?._id])
+
+  // Mark messages as read when chat is viewed
+  useEffect(() => {
+    const markMessagesAsRead = async () => {
+      if (!selectedChat?._id || !currentUser?._id) return
+
+      try {
+        await axios.post(`${BASE_URL}/api/chat/message/update-status`, {
+          chatId: selectedChat._id,
+          userId: currentUser._id,
+          status: 'read'
+        })
+        
+        // Update local message states to reflect read status
+        setMessages(prev => prev.map(msg => {
+          // Only update messages not sent by current user
+          const msgSenderId = msg.sender?._id?.toString() || msg.sender?.toString()
+          const currentUserIdStr = currentUser._id?.toString()
+          
+          if (msgSenderId !== currentUserIdStr && msg.status !== 'read') {
+            return { ...msg, status: 'read' }
+          }
+          return msg
+        }))
+
+        // Notify parent to update unread count
+        if (onMessagesRead) {
+          onMessagesRead(selectedChat._id)
+        }
+      } catch (error) {
+        console.error('Error marking messages as read:', error)
+      }
+    }
+
+    // Mark as read when chat is selected and user is viewing
+    if (selectedChat?._id && currentUser?._id) {
+      markMessagesAsRead()
+    }
+  }, [selectedChat?._id, currentUser?._id, onMessagesRead])
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -366,6 +405,37 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
     }
   }, [currentUser._id, otherParticipant, selectedChat?._id, navigate])
 
+  // Create call message in chat
+  const createCallMessage = async (callType, action = 'initiated') => {
+    if (!selectedChat?._id || !currentUser?._id) return null
+
+    try {
+      const callText = callType === 'video' ? 'Video call' : 'Audio call'
+      const messageContent = `${callText} ${action}`
+      
+      const response = await axios.post(`${BASE_URL}/api/chat/message`, {
+        chatId: selectedChat._id,
+        sender: currentUser._id,
+        content: messageContent,
+        messageType: callType === 'video' ? 'videoCall' : 'audioCall'
+      })
+
+      // Add new message to local state
+      setMessages(prev => [...prev, response.data])
+
+      // Update parent's chat list last message
+      if (onMessageSent && selectedChat?._id) {
+        onMessageSent(selectedChat._id, response.data)
+      }
+
+      return response.data
+    } catch (error) {
+      console.error('Error creating call message:', error)
+      // Don't block call if message creation fails
+      return null
+    }
+  }
+
   // Initiate call (audio or video)
   const initiateCall = React.useCallback(async (callType) => {
     console.log("\n" + "=".repeat(60));
@@ -401,6 +471,9 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
     try {
       setCallState('calling')
       console.log("  - Call State: calling");
+      
+      // Create call message in chat
+      await createCallMessage(callType, 'initiated')
       
       // Use same channel naming pattern as chat (user1_user2) for calls
       const callChannelName = getChannelName ? `call_${getChannelName.replace('chat_', '')}` : `call_${selectedChat._id}_${Date.now()}`
@@ -448,13 +521,35 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
         alert('Failed to start call. Please check your connection and try again.')
       }
     }
-  }, [selectedChat?._id, otherParticipant?._id, currentUser._id, getChannelName, navigateToCall, sendCallInvitation])
+  }, [selectedChat?._id, otherParticipant?._id, currentUser._id, getChannelName, navigateToCall, sendCallInvitation, onMessageSent])
 
   // Answer incoming call
   const answerCall = React.useCallback(async () => {
     if (!incomingCall) return
 
     try {
+      // Create call message when answering
+      if (selectedChat?._id && currentUser?._id) {
+        const callText = incomingCall.callType === 'video' ? 'Video call' : 'Audio call'
+        try {
+          const response = await axios.post(`${BASE_URL}/api/chat/message`, {
+            chatId: selectedChat._id,
+            sender: currentUser._id,
+            content: `${callText} received`,
+            messageType: incomingCall.callType === 'video' ? 'videoCall' : 'audioCall'
+          })
+          // Add new message to local state
+          setMessages(prev => [...prev, response.data])
+          // Update parent's chat list last message
+          if (onMessageSent && selectedChat?._id) {
+            onMessageSent(selectedChat._id, response.data)
+          }
+        } catch (error) {
+          console.error('Error creating call message:', error)
+          // Don't block call if message creation fails
+        }
+      }
+      
       await sendCallResponse('call_answer', incomingCall.callId, incomingCall.channelName, incomingCall.callType)
       setIncomingCall(null)
       setCallState(null)
@@ -463,7 +558,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
       console.error('Error answering call:', error)
       alert('Failed to answer call. Please try again.')
     }
-  }, [incomingCall, sendCallResponse, navigateToCall])
+  }, [incomingCall, sendCallResponse, navigateToCall, selectedChat?._id, currentUser?._id, onMessageSent])
 
   // Reject incoming call
   const rejectCall = React.useCallback(async () => {
@@ -486,15 +581,48 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
     const handleNewMessage = (data) => {
       const { chatId, message } = data
       
-      // Only add if it's for the currently selected chat and not already present
+      if (!message || !chatId) {
+        console.warn('Invalid message data received:', data)
+        return
+      }
+      
+      const messageSenderId = message.sender?._id?.toString() || message.sender?.toString()
+      const currentUserIdStr = currentUser?._id?.toString()
+      const isOwnMessage = messageSenderId === currentUserIdStr
+      
+      console.log('Socket message received:', {
+        chatId,
+        messageId: message._id,
+        sender: messageSenderId,
+        isOwnMessage,
+        currentChat: selectedChat?._id,
+        matchesCurrentChat: chatId === selectedChat?._id
+      })
+      
+      // Only process if it's for the currently selected chat
       if (chatId === selectedChat?._id) {
-          setMessages(prev => {
-          if (prev.some(m => m._id === message._id)) return prev
-          return [...prev, message]
+        setMessages(prev => {
+          // Always check if message already exists (by ID) to prevent duplicates
+          const exists = prev.some(m => {
+            const match = m._id === message._id || 
+                        (m._id?.toString() === message._id?.toString())
+            return match
           })
-        }
+          
+          if (exists) {
+            console.log('Message already exists, skipping duplicate:', message._id)
+            return prev
+          }
+          
+          console.log('Adding new message from socket:', message._id, 'isOwnMessage:', isOwnMessage)
+          return [...prev, message]
+        })
+      } else {
+        console.log('Message for different chat - updating sidebar only. Current:', selectedChat?._id, 'Message chat:', chatId)
+      }
         
-        // Update parent's chat list last message for incoming messages
+      // Update parent's chat list last message for all messages
+      // This helps update the sidebar even if chat is not selected
       if (onMessageSent && chatId) {
         onMessageSent(chatId, message)
       }
@@ -547,7 +675,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
       socket.off('call:invite', handleCallInvite)
       socket.off('call:response', handleCallResponse)
     }
-  }, [socket, isConnected, selectedChat?._id, onMessageSent, navigateToCall])
+  }, [socket, isConnected, selectedChat?._id, currentUser?._id, onMessageSent, navigateToCall])
 
   // Join/leave chat room when chat is selected
   useEffect(() => {
@@ -559,7 +687,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
 
     // Cleanup: leave chat room when chat changes or component unmounts
     return () => {
-      if (socket && isConnected) {
+      if (socket && isConnected && selectedChat?._id) {
         socket.emit('chat:leave', { chatId: selectedChat._id })
         console.log(`Left chat room: ${selectedChat._id}`)
       }
@@ -704,8 +832,13 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
         messageType: 'text'
       })
 
-      // Append message locally
-      setMessages(prev => [...prev, response.data])
+      // Append message locally (optimistic update)
+      // Note: Socket event will also arrive, but we'll filter duplicates
+      setMessages(prev => {
+        // Check if message already exists (from socket event that arrived first)
+        if (prev.some(m => m._id === response.data._id)) return prev
+        return [...prev, response.data]
+      })
       setMessageInput('')
 
       // Update parent's chat list last message (no refresh needed)
@@ -714,6 +847,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, globalIncom
       }
 
       // Socket notification handled automatically by backend
+      // The socket event will arrive, but we filter out duplicates based on message ID
     } catch (error) {
       console.error('Error sending message:', error)
       alert(error.response?.data?.error || 'Failed to send message. Please try again.')

@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "../components/common/Sidebar";
 import Header from "../components/common/Header";
+import GlobalCallContainer from "../components/dashboard/chats/GlobalCallContainer";
 
 const DashboardLayout = ({ children }) => {
   return (
@@ -10,6 +11,8 @@ const DashboardLayout = ({ children }) => {
         <Header />
         <main className="p-6">{children}</main>
       </div>
+      {/* Global Call Container - appears on all dashboard pages */}
+      <GlobalCallContainer />
     </div>
   );
 };
