@@ -9,7 +9,7 @@ import ChatHeader from './ChatHeader'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 
-const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesRead, globalIncomingCall, onGlobalCallAnswered, onGlobalCallRejected }) => {
+const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesRead }) => {
   const { user: currentUser } = useAuth()
   const { socket, isConnected } = useSocket()
   const navigate = useNavigate()
@@ -24,8 +24,6 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
   const [filePreview, setFilePreview] = useState(null)
   const [deletingMessageId, setDeletingMessageId] = useState(null)
   const [hoveredMessageId, setHoveredMessageId] = useState(null)
-  const [incomingCall, setIncomingCall] = useState(null)
-  const [callState, setCallState] = useState(null) // 'calling', 'ringing', 'answered'
   const fileInputRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -316,34 +314,6 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
           }
   }, [socket, isConnected, otherParticipant?._id])
 
-  // Send call response via Socket.io
-  const sendCallResponse = React.useCallback((responseType, callId, channelName, callType) => {
-    if (!socket || !isConnected) {
-      return false
-    }
-
-    try {
-      const otherUserId = otherParticipant?._id?.toString()
-      if (!otherUserId) {
-        return false
-      }
-
-      socket.emit('call:response', {
-        toUserId: otherUserId,
-        responseType,
-        callData: {
-          callId,
-          channelName,
-          callType
-        }
-      })
-        return true
-    } catch (err) {
-      console.error("Failed to send call response:", err)
-      return false
-    }
-  }, [socket, isConnected, otherParticipant?._id])
-
   // Navigate to call page (defined first to avoid hoisting issues)
   const navigateToCall = React.useCallback(async (channelName, callType, isAnswer = false) => {
     console.log("\n" + "=".repeat(60));
@@ -469,8 +439,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     }
 
     try {
-      setCallState('calling')
-      console.log("  - Call State: calling");
+      console.log("  - Initiating call");
       
       // Create call message in chat
       await createCallMessage(callType, 'initiated')
@@ -513,7 +482,6 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
       console.error("  - Error message:", error.message);
       console.error("  - Error stack:", error.stack);
       console.error("  - Call Type:", callType);
-      setCallState(null)
       // Only show error for critical failures
       if (error.message && error.message.includes('Agora')) {
         alert(error.message)
@@ -523,55 +491,6 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     }
   }, [selectedChat?._id, otherParticipant?._id, currentUser._id, getChannelName, navigateToCall, sendCallInvitation, onMessageSent])
 
-  // Answer incoming call
-  const answerCall = React.useCallback(async () => {
-    if (!incomingCall) return
-
-    try {
-      // Create call message when answering
-      if (selectedChat?._id && currentUser?._id) {
-        const callText = incomingCall.callType === 'video' ? 'Video call' : 'Audio call'
-        try {
-          const response = await axios.post(`${BASE_URL}/api/chat/message`, {
-            chatId: selectedChat._id,
-            sender: currentUser._id,
-            content: `${callText} received`,
-            messageType: incomingCall.callType === 'video' ? 'videoCall' : 'audioCall'
-          })
-          // Add new message to local state
-          setMessages(prev => [...prev, response.data])
-          // Update parent's chat list last message
-          if (onMessageSent && selectedChat?._id) {
-            onMessageSent(selectedChat._id, response.data)
-          }
-        } catch (error) {
-          console.error('Error creating call message:', error)
-          // Don't block call if message creation fails
-        }
-      }
-      
-      await sendCallResponse('call_answer', incomingCall.callId, incomingCall.channelName, incomingCall.callType)
-      setIncomingCall(null)
-      setCallState(null)
-      navigateToCall(incomingCall.channelName, incomingCall.callType, true)
-    } catch (error) {
-      console.error('Error answering call:', error)
-      alert('Failed to answer call. Please try again.')
-    }
-  }, [incomingCall, sendCallResponse, navigateToCall, selectedChat?._id, currentUser?._id, onMessageSent])
-
-  // Reject incoming call
-  const rejectCall = React.useCallback(async () => {
-    if (!incomingCall) return
-
-    try {
-      await sendCallResponse('call_reject', incomingCall.callId, incomingCall.channelName, incomingCall.callType)
-      setIncomingCall(null)
-      setCallState(null)
-    } catch (error) {
-      console.error('Error rejecting call:', error)
-    }
-  }, [incomingCall, sendCallResponse])
 
   // Handle incoming Socket.io messages and events
   useEffect(() => {
@@ -628,54 +547,12 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
       }
     }
 
-    // Handle call invitation (only if chat is selected and matches the caller)
-    // Global call handling is done in Chats component
-    const handleCallInvite = (data) => {
-      const { from, callType, channelName, callId } = data
-      
-      // Only handle if this is for the currently selected chat
-      if (selectedChat) {
-        const callerId = from?.toString()
-        const isCallerInChat = selectedChat.participants?.some(p => {
-          const participantId = p._id?.toString() || p?.toString()
-          return participantId === callerId
-        })
-        
-        if (isCallerInChat) {
-          setIncomingCall({
-            from,
-            callType,
-            channelName,
-            callId
-          })
-          setCallState('ringing')
-        }
-      }
-    }
-
-    // Handle call response
-    const handleCallResponse = (data) => {
-      const { from, responseType, channelName, callType } = data
-      
-      if (responseType === 'call_answer') {
-        setCallState('answered')
-        navigateToCall(channelName, callType, true)
-      } else if (responseType === 'call_reject' || responseType === 'call_end') {
-        setIncomingCall(null)
-        setCallState(null)
-      }
-    }
-
     socket.on('message:new', handleNewMessage)
-    socket.on('call:invite', handleCallInvite)
-    socket.on('call:response', handleCallResponse)
 
     return () => {
       socket.off('message:new', handleNewMessage)
-      socket.off('call:invite', handleCallInvite)
-      socket.off('call:response', handleCallResponse)
     }
-  }, [socket, isConnected, selectedChat?._id, currentUser?._id, onMessageSent, navigateToCall])
+  }, [socket, isConnected, selectedChat?._id, currentUser?._id, onMessageSent])
 
   // Join/leave chat room when chat is selected
   useEffect(() => {
@@ -875,11 +752,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     <div className="flex flex-col h-full bg-white p-3 md:p-6 flex-1 min-w-0 relative">
       <ChatHeader
         otherParticipant={otherParticipant}
-        callState={callState}
         onInitiateCall={initiateCall}
-        incomingCall={globalIncomingCall || incomingCall}
-        onAnswerCall={onGlobalCallAnswered || answerCall}
-        onRejectCall={onGlobalCallRejected || rejectCall}
       />
 
       <MessageList

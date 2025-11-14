@@ -4,6 +4,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { BASE_URL } from "../../../config/url";
 import axios from "axios";
+import { useSocket } from "../../../context/socketContext";
+import { useAuth } from "../../../context/authContext";
+import CallCancellationModal from "../../../components/dashboard/chats/CallCancellationModal";
 
 const APP_ID = import.meta.env.VITE_AGORA_APP_ID;
 const TOKEN_ENDPOINT = `${BASE_URL}/generate-token`;
@@ -12,6 +15,8 @@ const VideoCallPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const callData = location.state;
+  const { socket, isConnected } = useSocket();
+  const { user: currentUser } = useAuth();
 
   const clientRef = useRef(
     AgoraRTC.createClient({ mode: "rtc", codec: "vp8" })
@@ -30,6 +35,8 @@ const VideoCallPage = () => {
   const [tracksReady, setTracksReady] = useState(false);
   const [remoteUserJoined, setRemoteUserJoined] = useState(false);
   const [remoteUser, setRemoteUser] = useState(null);
+  const [callCancelled, setCallCancelled] = useState(false);
+  const [cancelledBy, setCancelledBy] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -425,6 +432,52 @@ const VideoCallPage = () => {
     };
   }, [callData]);
 
+  // Listen for call cancellation/rejection
+  useEffect(() => {
+    if (!socket || !isConnected || !callData) return;
+
+    const handleCallResponse = async (data) => {
+      const { from, responseType, callData: responseCallData } = data;
+      
+      // Check if this is a rejection/cancellation for this call
+      // Since we're the caller (initiator), any reject/cancel from the receiver means they cancelled
+      if (responseType === 'call_reject' || responseType === 'call_cancel' || responseType === 'call_end') {
+        // Only handle if this is from the other participant (receiver)
+        const otherParticipantId = callData?.otherParticipant?._id?.toString();
+        const fromId = from?.toString();
+        
+        // If the response is from the other participant, they cancelled
+        if (otherParticipantId && fromId === otherParticipantId) {
+          // Use the other participant's name from callData, or fetch it
+          const cancelledByName = callData?.otherParticipant?.username || 
+                                  callData?.otherParticipant?.email || 
+                                  'Unknown User';
+          
+          setCancelledBy(cancelledByName);
+          setCallCancelled(true);
+        } else if (!otherParticipantId) {
+          // If we don't have otherParticipant info, fetch it
+          try {
+            const userResponse = await axios.get(`${BASE_URL}/api/auth/${from}`);
+            const cancelledByUser = userResponse.data;
+            setCancelledBy(cancelledByUser?.username || cancelledByUser?.email || 'Unknown User');
+            setCallCancelled(true);
+          } catch (error) {
+            console.error('Error fetching user who cancelled:', error);
+            setCancelledBy('Unknown User');
+            setCallCancelled(true);
+          }
+        }
+      }
+    };
+
+    socket.on('call:response', handleCallResponse);
+
+    return () => {
+      socket.off('call:response', handleCallResponse);
+    };
+  }, [socket, isConnected, callData, currentUser?._id]);
+
   // Play local video
   useEffect(() => {
     const playLocalVideo = async () => {
@@ -502,8 +555,19 @@ const VideoCallPage = () => {
   const otherParticipant = callData?.otherParticipant;
   const participantName = otherParticipant?.username || 'Unknown User';
 
+  // Handle navigation after call cancellation dialog
+  const handleCancelDialogClose = () => {
+    setCallCancelled(false);
+  };
+
   return (
     <div className="relative min-h-screen bg-[#202124] text-white overflow-hidden">
+      {/* Call Cancelled Modal */}
+      <CallCancellationModal
+        isOpen={callCancelled}
+        cancelledBy={cancelledBy}
+        onClose={handleCancelDialogClose}
+      />
       {/* Top Bar - Minimal like Google Meet */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-3 bg-black/30 backdrop-blur-sm">
         <div className="flex items-center gap-3">

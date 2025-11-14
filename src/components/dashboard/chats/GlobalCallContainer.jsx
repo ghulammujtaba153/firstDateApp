@@ -13,6 +13,24 @@ const GlobalCallContainer = () => {
   const [incomingCall, setIncomingCall] = useState(null)
   const [callerInfo, setCallerInfo] = useState(null)
   const incomingCallChatRef = useRef(null)
+  const ringtoneRef = useRef(null)
+  const incomingCallRef = useRef(null) // Ref to track current call for socket handlers
+
+  // Initialize ringtone audio
+  useEffect(() => {
+    ringtoneRef.current = new Audio('/ring.mp3')
+    ringtoneRef.current.loop = true
+    ringtoneRef.current.volume = 0.7 // Set volume to 70%
+
+    // Cleanup on unmount
+    return () => {
+      if (ringtoneRef.current) {
+        ringtoneRef.current.pause()
+        ringtoneRef.current.currentTime = 0
+        ringtoneRef.current = null
+      }
+    }
+  }, [])
 
   // Fetch caller information when call arrives
   const fetchCallerInfo = useCallback(async (callerId) => {
@@ -53,7 +71,24 @@ const GlobalCallContainer = () => {
     }
   }, [currentUser?._id])
 
-  // Listen for incoming calls
+  // Stop ringtone (defined before clearCallState to avoid hoisting issues)
+  const stopRingtone = useCallback(() => {
+    if (ringtoneRef.current) {
+      ringtoneRef.current.pause()
+      ringtoneRef.current.currentTime = 0
+    }
+  }, [])
+
+  // Clear call state helper
+  const clearCallState = useCallback(() => {
+    stopRingtone()
+    setIncomingCall(null)
+    setCallerInfo(null)
+    incomingCallChatRef.current = null
+    incomingCallRef.current = null // Clear ref as well
+  }, [stopRingtone])
+
+  // Listen for incoming calls and call responses
   useEffect(() => {
     if (!socket || !isConnected || !currentUser?._id) return
 
@@ -71,20 +106,51 @@ const GlobalCallContainer = () => {
       setCallerInfo(caller)
 
       // Set incoming call state
-      setIncomingCall({
+      const callState = {
         from,
         callType,
         channelName,
         callId
-      })
+      }
+      setIncomingCall(callState)
+      incomingCallRef.current = callState // Update ref for socket handlers
+
+      // Play ringtone
+      if (ringtoneRef.current) {
+        ringtoneRef.current.play().catch(error => {
+          console.error('Error playing ringtone:', error)
+        })
+      }
+    }
+
+    // Handle call responses (reject, end, cancel)
+    const handleCallResponse = (data) => {
+      const { from, responseType, callId, callData } = data
+      
+      // Get the callId from callData if not directly in data
+      const actualCallId = callId || callData?.callId
+      
+      // Use ref to get current call state (avoids dependency issues)
+      const currentCall = incomingCallRef.current
+      
+      // If caller cancelled/rejected/ended the call, dismiss the incoming call UI
+      // Check if this response matches our current incoming call
+      if (currentCall && actualCallId === currentCall.callId) {
+        if (responseType === 'call_reject' || responseType === 'call_end' || responseType === 'call_cancel') {
+          console.log('Call cancelled/ended by other user:', responseType)
+          clearCallState()
+        }
+      }
     }
 
     socket.on('call:invite', handleCallInvite)
+    socket.on('call:response', handleCallResponse)
 
     return () => {
       socket.off('call:invite', handleCallInvite)
+      socket.off('call:response', handleCallResponse)
     }
-  }, [socket, isConnected, currentUser?._id, fetchCallerInfo])
+  }, [socket, isConnected, currentUser?._id, fetchCallerInfo, clearCallState])
 
   // Handle call response
   const sendCallResponse = useCallback((responseType) => {
@@ -145,6 +211,9 @@ const GlobalCallContainer = () => {
   const handleAnswerCall = useCallback(async () => {
     if (!incomingCall) return
 
+    // Stop ringtone immediately
+    stopRingtone()
+
     try {
       const chat = incomingCallChatRef.current
 
@@ -171,33 +240,36 @@ const GlobalCallContainer = () => {
       await navigateToCall(incomingCall.channelName, incomingCall.callType, true)
 
       // Clear call state
-      setIncomingCall(null)
-      setCallerInfo(null)
-      incomingCallChatRef.current = null
+      clearCallState()
     } catch (error) {
       console.error('Error answering call:', error)
       alert('Failed to answer call. Please try again.')
     }
-  }, [incomingCall, currentUser?._id, sendCallResponse, navigateToCall])
+  }, [incomingCall, currentUser?._id, sendCallResponse, navigateToCall, stopRingtone])
 
   // Handle rejecting call
   const handleRejectCall = useCallback(() => {
     if (!incomingCall) return
+
+    // Stop ringtone immediately
+    stopRingtone()
 
     try {
       sendCallResponse('call_reject')
     } catch (error) {
       console.error('Error rejecting call:', error)
     } finally {
-      setIncomingCall(null)
-      setCallerInfo(null)
-      incomingCallChatRef.current = null
+      clearCallState()
     }
-  }, [incomingCall, sendCallResponse])
+  }, [incomingCall, sendCallResponse, stopRingtone])
 
   // Auto-dismiss call after 30 seconds if not answered
   useEffect(() => {
-    if (!incomingCall) return
+    if (!incomingCall) {
+      // Stop ringtone if call state is cleared
+      stopRingtone()
+      return
+    }
 
     const timer = setTimeout(() => {
       console.log('Call auto-dismissed after 30 seconds')
@@ -205,7 +277,7 @@ const GlobalCallContainer = () => {
     }, 30000)
 
     return () => clearTimeout(timer)
-  }, [incomingCall, handleRejectCall])
+  }, [incomingCall, handleRejectCall, stopRingtone])
 
   // Don't render if no incoming call
   if (!incomingCall) return null

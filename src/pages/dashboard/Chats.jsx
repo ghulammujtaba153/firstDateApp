@@ -407,42 +407,7 @@ const Chats = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-1rem)] md:h-[calc(100vh-2rem)] m-2 md:m-4 shadow-lg rounded-[20px] md:rounded-[30px] overflow-hidden bg-white relative">
-      {/* Global Call Notification - shows even when no chat is selected */}
-      {globalIncomingCall && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-6 md:p-8 shadow-2xl max-w-md w-full mx-4 text-center">
-            <div className="mb-6">
-              <img
-                src={callerInfo?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"}
-                alt={callerInfo?.username || "User"}
-                className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-primary"
-              />
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                {globalIncomingCall.callType === 'video' ? '📹 Video' : '📞 Audio'} Call
-              </h3>
-              <p className="text-lg text-gray-600">
-                {callerInfo?.username || 'Unknown User'} is calling...
-              </p>
-            </div>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={handleRejectGlobalCall}
-                className="px-6 py-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors flex items-center gap-2"
-              >
-                <span className="text-xl">📞</span>
-                Decline
-              </button>
-              <button
-                onClick={handleAnswerGlobalCall}
-                className="px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors flex items-center gap-2"
-              >
-                <span className="text-xl">📞</span>
-                Answer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       <Sidebar 
         users={sortedUsers} 
