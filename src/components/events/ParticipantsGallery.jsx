@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
 import { useSocket } from '../../context/socketContext';
 import { BASE_URL } from '../../config/url';
 import axios from 'axios';
 import Loader from '../common/Loader';
+import GalleryTimer from './GalleryTimer';
+import GalleryCellebration from './GalleryCellebration';
 
 const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
   const navigate = useNavigate();
@@ -13,6 +15,9 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showTimer, setShowTimer] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [galleryReady, setGalleryReady] = useState(false);
 
   useEffect(() => {
     const fetchParticipants = async () => {
@@ -53,9 +58,46 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
     };
 
     fetchParticipants();
-  }, [eventId, isOpen, event]);
+  }, [eventId, isOpen, event, galleryReady]);
+
+  // Reset timer and celebration when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      // Reset all states when modal opens
+      setShowTimer(false);
+      setShowCelebration(false);
+      setGalleryReady(false);
+    } else {
+      // Reset when modal closes
+      setShowTimer(false);
+      setShowCelebration(false);
+      setGalleryReady(false);
+    }
+  }, [isOpen]);
+
+  // Start timer when participants are loaded and modal is open
+  useEffect(() => {
+    if (isOpen && !loading && participants.length > 0 && !showTimer && !galleryReady && !showCelebration) {
+      setShowTimer(true);
+    }
+  }, [isOpen, loading, participants.length, showTimer, galleryReady, showCelebration]);
+
+  const handleTimerComplete = () => {
+    setShowTimer(false);
+    setShowCelebration(true);
+  };
+
+  const handleCelebrationComplete = () => {
+    setShowCelebration(false);
+    setGalleryReady(true);
+  };
 
   const handleParticipantClick = async (participant) => {
+    // Don't allow clicks during timer
+    if (!galleryReady) {
+      return;
+    }
+
     if (!currentUser || !participant) {
       alert('Unable to start chat. Please try again.');
       return;
@@ -114,10 +156,125 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
     return onlineUsers.has(userIdStr);
   };
 
+  // Separate participants into online and offline groups
+  const { onlineParticipants, offlineParticipants } = useMemo(() => {
+    const online = [];
+    const offline = [];
+
+    participants.forEach((participant) => {
+      let participantId;
+      
+      if (typeof participant === 'string') {
+        participantId = participant.toString();
+      } else if (participant._id) {
+        participantId = participant._id.toString();
+      } else {
+        participantId = participant.toString();
+      }
+
+      // Check if user is online
+      const isOnline = participantId && onlineUsers.has(participantId);
+
+      if (isOnline) {
+        online.push(participant);
+      } else {
+        offline.push(participant);
+      }
+    });
+
+    return { onlineParticipants: online, offlineParticipants: offline };
+  }, [participants, onlineUsers]);
+
+  // Render participant card component
+  const renderParticipantCard = (participant) => {
+    // Handle both populated and unpopulated participants
+    let participantId, username, avatar, email;
+    
+    if (typeof participant === 'string' || typeof participant === 'object' && !participant._id) {
+      // Unpopulated participant (just ID)
+      participantId = participant.toString();
+      username = 'User';
+      avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
+    } else {
+      // Populated participant
+      participantId = participant._id?.toString() || participant.toString();
+      username = participant.username || participant.email?.split('@')[0] || 'User';
+      avatar = participant.avatar || participant.profilePicture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
+      email = participant.email;
+    }
+
+    const isOnline = isUserOnline(participantId);
+    const isCurrentUser = participantId === currentUser?._id?.toString();
+    const isDisabled = !galleryReady;
+
+    return (
+      <div
+        key={participantId}
+        onClick={() => !isCurrentUser && !isDisabled && handleParticipantClick(participant)}
+        className={`
+          relative p-4 rounded-xl border-2 transition-all
+          ${isDisabled ? 'blur-sm opacity-60 pointer-events-none' : ''}
+          ${isCurrentUser 
+            ? 'border-gray-300 bg-gray-50 cursor-default' 
+            : isDisabled 
+              ? 'border-gray-200 cursor-not-allowed' 
+              : 'border-gray-200 hover:border-primary hover:shadow-lg cursor-pointer transform hover:scale-105'
+          }
+        `}
+      >
+        {/* Avatar with online indicator */}
+        <div className="relative mx-auto mb-3 w-20 h-20">
+          <img
+            src={avatar}
+            alt={username}
+            className="w-full h-full rounded-full object-cover border-2 border-white shadow-md"
+            onError={(e) => {
+              e.target.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
+            }}
+          />
+          {/* Online indicator - green dot with pulse animation */}
+          {isOnline && (
+            <div className="absolute bottom-0 right-0 w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow-sm z-10">
+              <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
+            </div>
+          )}
+        </div>
+
+        {/* Username */}
+        <div className="text-center">
+          <p className="text-sm font-semibold text-gray-800 truncate" title={username}>
+            {isCurrentUser ? `${username} (You)` : username}
+          </p>
+          {isOnline && !isCurrentUser && (
+            <p className="text-xs text-green-600 mt-1 font-medium">● Online</p>
+          )}
+          {!isOnline && !isCurrentUser && (
+            <p className="text-xs text-gray-400 mt-1">Offline</p>
+          )}
+        </div>
+
+        {/* Click hint for non-current users */}
+        {!isCurrentUser && (
+          <div className="mt-2 text-center">
+            <p className="text-xs text-primary font-medium animate-pulse">Click to chat</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Celebration Overlay */}
+      {showCelebration && (
+        <GalleryCellebration 
+          eventTitle={event?.title} 
+          onComplete={handleCelebrationComplete}
+        />
+      )}
+
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
@@ -134,13 +291,23 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-3xl font-light"
             aria-label="Close"
+            disabled={showTimer || showCelebration}
           >
             ×
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 relative">
+          {/* Timer Overlay */}
+          {showTimer && (
+            <div className="absolute inset-0 bg-white z-10 flex items-center justify-center">
+              <GalleryTimer 
+                onComplete={handleTimerComplete}
+                duration={5000}
+              />
+            </div>
+          )}
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <Loader />
@@ -170,79 +337,38 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
               <p className="text-gray-400 text-sm mt-2">Be the first to join this event!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {participants.map((participant) => {
-                // Handle both populated and unpopulated participants
-                let participantId, username, avatar, email;
-                
-                if (typeof participant === 'string' || typeof participant === 'object' && !participant._id) {
-                  // Unpopulated participant (just ID)
-                  participantId = participant.toString();
-                  username = 'User';
-                  avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
-                } else {
-                  // Populated participant
-                  participantId = participant._id?.toString() || participant.toString();
-                  username = participant.username || participant.email?.split('@')[0] || 'User';
-                  avatar = participant.avatar || participant.profilePicture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
-                  email = participant.email;
-                }
-
-                const isOnline = isUserOnline(participantId);
-                const isCurrentUser = participantId === currentUser?._id?.toString();
-
-                return (
-                  <div
-                    key={participantId}
-                    onClick={() => !isCurrentUser && handleParticipantClick(participant)}
-                    className={`
-                      relative p-4 rounded-xl border-2 transition-all
-                      ${isCurrentUser 
-                        ? 'border-gray-300 bg-gray-50 cursor-default' 
-                        : 'border-gray-200 hover:border-primary hover:shadow-lg cursor-pointer transform hover:scale-105'
-                      }
-                    `}
-                  >
-                    {/* Avatar with online indicator */}
-                    <div className="relative mx-auto mb-3 w-20 h-20">
-                      <img
-                        src={avatar}
-                        alt={username}
-                        className="w-full h-full rounded-full object-cover border-2 border-white shadow-md"
-                        onError={(e) => {
-                          e.target.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
-                        }}
-                      />
-                      {/* Online indicator - green dot with pulse animation */}
-                      {isOnline && (
-                        <div className="absolute bottom-0 right-0 w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow-sm z-10">
-                          <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
-                        </div>
-                      )}
+            <div className={`space-y-8 ${showTimer ? 'opacity-30 pointer-events-none' : ''}`}>
+              {/* Online Participants Section */}
+              {onlineParticipants.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-4">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2">
+                      <div className="w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
                     </div>
-
-                    {/* Username */}
-                    <div className="text-center">
-                      <p className="text-sm font-semibold text-gray-800 truncate" title={username}>
-                        {isCurrentUser ? `${username} (You)` : username}
-                      </p>
-                      {isOnline && !isCurrentUser && (
-                        <p className="text-xs text-green-600 mt-1 font-medium">● Online</p>
-                      )}
-                      {!isOnline && !isCurrentUser && (
-                        <p className="text-xs text-gray-400 mt-1">Offline</p>
-                      )}
-                    </div>
-
-                    {/* Click hint for non-current users */}
-                    {!isCurrentUser && (
-                      <div className="mt-2 text-center">
-                        <p className="text-xs text-primary font-medium animate-pulse">Click to chat</p>
-                      </div>
-                    )}
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      Online ({onlineParticipants.length})
+                    </h3>
                   </div>
-                );
-              })}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {onlineParticipants.map((participant) => renderParticipantCard(participant))}
+                  </div>
+                </div>
+              )}
+
+              {/* Offline Participants Section */}
+              {offlineParticipants.length > 0 && (
+                <div>
+                  <div className="flex items-center mb-4">
+                    <div className="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      Offline ({offlineParticipants.length})
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {offlineParticipants.map((participant) => renderParticipantCard(participant))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

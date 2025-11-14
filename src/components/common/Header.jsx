@@ -201,12 +201,12 @@ const Header = () => {
           )}
         </div>
         
-        <button className="text-primary  rounded-lg p-1">
+        {/* <button className="text-primary  rounded-lg p-1">
           <FaCommentDots size={20}  />
-        </button>
+        </button> */}
 
 
-        <div className="h-10 w-px bg-gray-900"></div>
+        <div className="h-10 w-px bg-gray-300"></div>
 
 
         {/* Profile Dropdown */}

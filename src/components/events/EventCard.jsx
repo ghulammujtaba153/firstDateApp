@@ -1,5 +1,5 @@
 import React from 'react'
-import { FaCalendar } from 'react-icons/fa6'
+import { FaCalendar, FaImages, FaStar } from 'react-icons/fa6'
 
 const EventCard = ({ 
   item, 
@@ -126,9 +126,9 @@ const EventCard = ({
                 onViewGallery(item);
               }
             }}
-            className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-full text-center hover:bg-gray-300 transition text-sm font-medium mb-2"
+            className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-center hover:bg-gray-300 transition text-sm font-medium mb-2"
           >
-            👥 View Gallery ({participantsCount})
+           <FaImages className="mr-2" /> View Gallery ({participantsCount})
           </button>
         )}
 
@@ -141,9 +141,9 @@ const EventCard = ({
                 onFeedback(item);
               }
             }}
-            className="w-full px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-center hover:bg-blue-200 transition text-sm font-medium mb-2"
+            className="w-full px-4 py-2 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-center hover:bg-blue-200 transition text-sm font-medium mb-2"
           >
-            ⭐ Give Feedback
+            <FaStar className="mr-2" /> Give Feedback
           </button>
         )}
 
