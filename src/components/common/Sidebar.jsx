@@ -103,10 +103,10 @@ const Sidebar = () => {
           <img src="/logo.png" alt="Logo" className="w-32 mb-5 mx-auto" />
 
           {/* personal info */}
-          <div className="flex flex-col items-center gap-3 px-4 py-3 rounded-full transition-colors duration-200 hover:bg-gray-100 hover:text-primary">
+          {/* <div className="flex flex-col items-center gap-3 px-4 py-3 rounded-full transition-colors duration-200 hover:bg-gray-100 hover:text-primary">
             <img src={currentUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"} alt="Avatar" className="w-15 h-15 rounded-full" />
             <p>{currentUser?.username}</p>
-          </div>
+          </div> */}
           
           
 
