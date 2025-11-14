@@ -55,7 +55,7 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
               onClick={() => handleUserClick(user)}
               className={`flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${
                 selectedUser?.id === user.id || selectedUser?._id === user.chatId
-                  ? "bg-primary text-white"
+                  ? "bg-primary/30"
                   : "hover:bg-primary/20"
               }`}
             >
@@ -70,15 +70,22 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
                 )}
               </div>
               <div className="flex flex-col flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <span className="font-medium truncate text-sm md:text-base">{user.name}</span>
-                  {user.unreadCount > 0 && (
-                    <span className="bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 min-w-[20px] text-center">
-                      {user.unreadCount > 99 ? '99+' : user.unreadCount}
+                <div className="flex items-center justify-between gap-1.5 md:gap-2">
+                  <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
+                    <span className="font-medium truncate text-sm md:text-base">{user.name}</span>
+                    {user.unreadCount > 0 && (
+                      <span className="bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 min-w-[20px] text-center">
+                        {user.unreadCount > 99 ? '99+' : user.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  {user.lastMessage?.timestamp && (
+                    <span className="text-xs text-gray-500 flex-shrink-0">
+                      {new Date(user.lastMessage.timestamp).toLocaleTimeString()}
                     </span>
                   )}
                 </div>
-                <span className={`text-xs truncate ${selectedUser?.id === user.id || selectedUser?._id === user.chatId ? "text-white/80" : "text-gray-500"}`}>
+                <span className={`text-xs truncate ${selectedUser?.id === user.id || selectedUser?._id === user.chatId ? "text-gray-500" : "text-gray-500"}`}>
                   {user.lastMessage}
                 </span>
               </div>
