@@ -44,6 +44,7 @@ const FaceVerification = () => {
     };
   }, []);
 
+
   // ✅ Keep camera stream alive - prevent timeout
   useEffect(() => {
     if (!streamRef.current) return;
@@ -192,7 +193,42 @@ const FaceVerification = () => {
     return new Blob([u8], { type: mime });
   };
 
-  // ✅ Compare captured selfie with user photo using Didit API
+  // ✅ Poll workflow status
+  const pollWorkflowStatus = async (sessionId, maxAttempts = 30, interval = 2000) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const response = await fetch(`${BASE_URL}/api/workflow/status/${sessionId}`);
+        const data = await response.json();
+
+        console.log(`Status check ${attempt + 1}:`, data);
+
+        // Check if workflow is complete
+        if (data.status === "completed" || data.status === "success" || data.status === "failed") {
+          return data;
+        }
+
+        // If still processing, wait and try again
+        if (data.status === "processing" || data.status === "pending") {
+          setStatus(`🔄 Verifying... (${attempt + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, interval));
+          continue;
+        }
+
+        // Return current status
+        return data;
+      } catch (error) {
+        console.error("Error polling status:", error);
+        if (attempt === maxAttempts - 1) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, interval));
+      }
+    }
+
+    throw new Error("Workflow status check timeout");
+  };
+
+  // ✅ Compare captured selfie with user photo using Didit KYC Workflow
   const handleVerify = async () => {
     if (!userPhoto) {
       setStatus("❌ Please upload your photo first.");
@@ -205,54 +241,83 @@ const FaceVerification = () => {
     }
 
     setSubmitting(true);
-    setStatus("🔄 Verifying faces...");
+    setStatus("🔄 Starting verification workflow...");
 
     try {
+      // 1️⃣ Start workflow with images
       const form = new FormData();
-      form.append("user_image", dataURLToBlob(capturedSelfie), "selfie.png");
       form.append("ref_image", dataURLToBlob(userPhoto), "user_photo.png");
+      form.append("selfie_image", dataURLToBlob(capturedSelfie), "selfie.png");
 
-      // Call Didit API endpoint for face verification
-      // Endpoint: POST /api/verify-face
-      // Controller: server/controller/diditController.js
-      const res = await fetch(`${BASE_URL}/api/verify-face`, {
+      const startRes = await fetch(`${BASE_URL}/api/workflow/start`, {
         method: "POST",
         body: form,
       });
 
-      // Parse JSON response
-      let data;
-      try {
-        data = await res.json();
-      } catch (err) {
-        const text = await res.text().catch(() => "");
-        data = text ? { raw: text } : null;
+      if (!startRes.ok) {
+        const errorData = await startRes.json().catch(() => ({ message: "Failed to start workflow" }));
+        throw new Error(errorData.message || "Failed to start workflow");
       }
 
-      console.log("API Response:", data);
+      const startData = await startRes.json();
+      const sessionId = startData.sessionId;
 
-      // Extract score from Didit response
-      const faceMatch = data?.face_match ?? data?.result ?? data;
-      const score = faceMatch?.score ?? data?.confidence ?? data?.score;
-      const status = faceMatch?.status ?? data?.match ?? data?.is_match;
+      if (!sessionId) {
+        throw new Error("No session ID received from workflow");
+      }
 
-      // Check if score is >= 85
-      if (typeof score === "number" && score >= 85) {
+      console.log("Workflow started, sessionId:", sessionId);
+      setStatus("🔄 Processing verification...");
+
+      // 2️⃣ Poll for workflow status
+      const statusData = await pollWorkflowStatus(sessionId);
+
+      console.log("Final workflow status:", statusData);
+
+      // 3️⃣ Extract verification result
+      // DIDIT workflow response structure may vary, so we check multiple possible fields
+      const result = statusData.result || statusData.data || statusData;
+      const faceMatch = result?.face_match || result?.verification || result;
+      
+      // Extract score - check multiple possible locations
+      let score = null;
+      if (faceMatch?.score !== undefined) {
+        score = faceMatch.score;
+      } else if (faceMatch?.confidence !== undefined) {
+        score = faceMatch.confidence;
+      } else if (result?.score !== undefined) {
+        score = result.score;
+      } else if (statusData.score !== undefined) {
+        score = statusData.score;
+      } else if (faceMatch?.similarity !== undefined) {
+        score = faceMatch.similarity * 100; // Convert 0-1 to percentage
+      }
+
+      // Check verification status
+      const isVerified = 
+        statusData.status === "completed" || 
+        statusData.status === "success" ||
+        faceMatch?.status === "verified" ||
+        faceMatch?.match === true ||
+        (typeof score === "number" && score >= 85);
+
+      // 4️⃣ Handle verification result
+      if (isVerified && typeof score === "number" && score >= 85) {
         // Verification successful - update user status
         try {
-          const res = await axios.put(`${BASE_URL}/api/auth/onboarding/${user._id}`, {
+          const updateRes = await axios.put(`${BASE_URL}/api/auth/onboarding/${user._id}`, {
             verified: true
           });
 
-          setUser(res.data);
+          setUser(updateRes.data);
 
           // Stop camera before navigating
           stopCamera();
           
           setVerificationResult({
             success: true,
-            similarity: score / 100, // Convert to 0-1 scale for display
-            message: `✅ Verification successful! Score: ${score}%`
+            similarity: score / 100,
+            message: `✅ Verification successful! Score: ${score.toFixed(1)}%`
           });
           setNotificationType("success");
           setShowNotification(true);
@@ -267,14 +332,16 @@ const FaceVerification = () => {
           setVerificationResult({
             success: false,
             similarity: score / 100,
-            message: `Verification passed (${score}%) but failed to update status. Please try again.`
+            message: `Verification passed (${score.toFixed(1)}%) but failed to update status. Please try again.`
           });
           setNotificationType("error");
           setShowNotification(true);
         }
       } else {
         // Verification failed
-        const scoreDisplay = typeof score === "number" ? score : "N/A";
+        const scoreDisplay = typeof score === "number" ? score.toFixed(1) : "N/A";
+        const reason = faceMatch?.reason || statusData.message || "Verification did not meet requirements";
+        
         setVerificationResult({
           success: false,
           similarity: typeof score === "number" ? score / 100 : 0,
@@ -287,11 +354,11 @@ const FaceVerification = () => {
       }
     } catch (error) {
       console.error("Error during face verification:", error);
-      setStatus("❌ Error during verification. Please try again.");
+      setStatus(`❌ Error: ${error.message || "Please try again."}`);
       setVerificationResult({
         success: false,
         similarity: 0,
-        message: "Error during verification. Check console for details."
+        message: error.message || "Error during verification. Check console for details."
       });
       setShowRetryOptions(true);
       setNotificationType("error");

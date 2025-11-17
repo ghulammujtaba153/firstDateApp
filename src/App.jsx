@@ -30,7 +30,6 @@ import ProtectedRoute from "./components/ProtectedRoutes";
 import UserRoutes from "./components/UserRoutes";
 import GoogleAuth from "./pages/GoogleAuth";
 import FreeScreenProtectedRoutes from "./components/FreeScreenProtectedRoutes";
-import FaceTryVerification from "./pages/FaceTryVerification";
 import Support from "./pages/dashboard/Support";
 
 function App() {
@@ -41,7 +40,7 @@ function App() {
 
         <Route path="/" element={<UserRoutes />} />
         <Route path="/verification" element={<FaceVerification />} />
-        <Route path="/try-verification" element={<FaceTryVerification />} />
+        
 
         {/* Onboarding routes - accessible to authenticated users who haven't completed onboarding */}
         <Route path="/onboarding" element={<OnBoarding />} />

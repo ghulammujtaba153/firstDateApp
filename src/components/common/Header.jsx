@@ -74,9 +74,32 @@ const Header = () => {
     setDropdownOpen(false);
   }
 
-  const handleVerificationClick = () => {
-    navigate('/verification');
-    setDropdownOpen(false);
+  const handleVerificationClick = async () => {
+    try {
+      setDropdownOpen(false);
+      
+      // Show loading state
+      const loadingMessage = "Starting verification...";
+      
+      // Start DIDIT workflow
+      const response = await axios.post(`${BASE_URL}/api/workflow/start`, {
+        userId: user?._id || user?.id,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data?.workflowUrl || response.data?.redirectUrl) {
+        // Redirect to DIDIT's hosted verification UI
+        const workflowUrl = response.data.workflowUrl || response.data.redirectUrl;
+        window.location.href = workflowUrl;
+      } else {
+        console.error("No workflow URL received:", response.data);
+        alert("Failed to start verification. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error starting verification:", error);
+      alert(error.response?.data?.message || "Failed to start verification. Please try again.");
+    }
   }
 
   const handleNotificationClick = async (notification) => {
@@ -232,10 +255,15 @@ const Header = () => {
               <hr />
               <button
                onClick={handleVerificationClick}
-               className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 text-gray-600"
+               disabled={user?.verified}
+               className={`flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-gray-100 ${
+                 user?.verified 
+                   ? "text-gray-400 cursor-not-allowed opacity-50" 
+                   : "text-gray-600"
+               }`}
+               title={user?.verified ? "Already verified" : "Start verification"}
              >
-                <FaCamera /> Verification
-
+                <FaCamera /> {user?.verified ? "Verified" : "Verification"}
               </button>
               <button 
                 onClick={handleProfileClick}

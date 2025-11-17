@@ -59,7 +59,7 @@ const PartnerPreferences = () => {
         <Notification
           title="Preferences Saved!"
           message="Your partner preferences have been successfully saved."
-          link="/verification"
+          link="/dashboard"
           linkText="Continue"
           onClose={() => setShow(false)}
         />
