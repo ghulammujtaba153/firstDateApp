@@ -751,6 +751,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
   return (
     <div className="flex flex-col h-full bg-white p-3 md:p-6 flex-1 min-w-0 relative">
       <ChatHeader
+        chat={selectedChat}
         otherParticipant={otherParticipant}
         onInitiateCall={initiateCall}
       />

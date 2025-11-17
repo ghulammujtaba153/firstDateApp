@@ -129,16 +129,19 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
     try {
       // Create or get chat room
       const response = await axios.post(`${BASE_URL}/api/chat/create`, {
-        participants: [currentUserId, participantId]
+        participants: [currentUserId, participantId],
+        type: 'event',
+        eventId: eventId
       });
 
       const chat = response.data;
 
       // Navigate to chat room
-      navigate('/dashboard/chats', {
+      navigate('/dashboard/events/chat', {
         state: {
           chatId: chat._id,
-          userId: participantId
+          userId: participantId,
+          eventId: eventId
         }
       });
 

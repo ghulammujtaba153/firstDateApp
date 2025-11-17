@@ -42,6 +42,7 @@ const PartnerPreferences = () => {
       setUser(res.data);
       setShow(true);
       console.log("✅ Preferences saved:", form);
+      setShowVerificationModal(true);
     } catch (error) {
       console.error("❌ Error saving preferences:", error);
     }
@@ -157,13 +158,6 @@ const PartnerPreferences = () => {
             <FaArrowLeft className="my-4 cursor-pointer" />
           </Link>
 
-          {/* Render based on step */}
-          {currentStep === 0 && <PartnerAge form={form} setForm={setForm} />}
-          {currentStep === 1 && <PartnerBody form={form} setForm={setForm} />}
-          {currentStep === 2 && <PartnerHealth form={form} setForm={setForm} />}
-          {currentStep === 3 && <PartnerHobbies form={form} setForm={setForm} />}
-          {currentStep === 4 && <PartnerLocation form={form} setForm={setForm} />}
-          {currentStep === 5 && <PartnerPersonality form={form} setForm={setForm} />}
 
           {/* Progress bar */}
           <div className="w-full max-w-[450px] mt-4">
@@ -177,6 +171,16 @@ const PartnerPreferences = () => {
               Step {currentStep + 1} of {totalSteps + 1}
             </p>
           </div>
+
+          {/* Render based on step */}
+          {currentStep === 0 && <PartnerAge form={form} setForm={setForm} />}
+          {currentStep === 1 && <PartnerBody form={form} setForm={setForm} />}
+          {currentStep === 2 && <PartnerHealth form={form} setForm={setForm} />}
+          {currentStep === 3 && <PartnerHobbies form={form} setForm={setForm} />}
+          {currentStep === 4 && <PartnerLocation form={form} setForm={setForm} />}
+          {currentStep === 5 && <PartnerPersonality form={form} setForm={setForm} />}
+
+          
 
           {/* Navigation buttons */}
           <div className="flex justify-between mt-6">
@@ -192,7 +196,7 @@ const PartnerPreferences = () => {
               onClick={() => {
                 if (currentStep === totalSteps) {
                   // Show verification modal on finish
-                  setShowVerificationModal(true);
+                  handleSubmit();
                 } else {
                   handleNext();
                 }

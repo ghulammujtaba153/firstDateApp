@@ -10,6 +10,7 @@ import {
   FaPhone,
   FaMoneyBillAlt,
   FaQuestionCircle,
+  FaComments,
 } from "react-icons/fa";
 import { TfiStar } from "react-icons/tfi";
 import { MdOutlinePrivacyTip } from "react-icons/md";
@@ -74,7 +75,14 @@ const Sidebar = () => {
     { name: "Dashboard", icon: <FaTachometerAlt />, path: "/dashboard" },
     { name: "Chats", icon: <FaPhone />, path: "/dashboard/chats", unreadCount: totalUnreadCount },
     { name: "Matches", icon: <TfiStar />, path: "/dashboard/matches" },
-    { name: "Events", icon: <FaCalendarAlt />, path: "/dashboard/events" },
+    {
+      name: "Events",
+      icon: <FaCalendarAlt />,
+      path: "/dashboard/events",
+      children: [
+        { name: "Events Chat", icon: <FaComments />, path: "/dashboard/events/chat" },
+      ],
+    },
     { name: "Subscriptions", icon: <FaMoneyBillAlt />, path: "/dashboard/subscriptions" },
     { name: "Profile", icon: <FaUser />, path: "/dashboard/profile" },
     { name: "Support", icon: <FaQuestionCircle />, path: "/dashboard/support" },
@@ -82,6 +90,16 @@ const Sidebar = () => {
     { name: "Privacy Policy", icon: <MdOutlinePrivacyTip />, path: "/dashboard/privacy-policy" },
     // { name: "Logout", icon: <FaSignOutAlt />, path: "" },
   ];
+
+  const isChildActive = (children = []) =>
+    children.some((child) => location.pathname.startsWith(child.path));
+
+  const getNavClasses = (isActive, isChild = false) =>
+    `flex items-center justify-between gap-3 ${
+      isChild ? "px-6 py-2 rounded-xl text-sm" : "px-4 py-3 rounded-full"
+    } transition-colors duration-200 ${
+      isActive ? "bg-primary text-white" : "hover:bg-gray-100 hover:text-primary"
+    }`;
 
   return (
     <>
@@ -112,34 +130,50 @@ const Sidebar = () => {
 
           {/* Menu */}
           <ul className="space-y-3 flex-1">
-            {menuItems.map((item, index) => (
-              <li key={index}>
-                <NavLink
-                  to={item.path}
-                  end={item.path === "/dashboard"} // Only exact match for Dashboard
-                  className={({ isActive }) =>
-                    `flex items-center justify-between gap-3 px-4 py-3 rounded-full transition-colors duration-200 
-                    ${
-                      isActive
-                        ? "bg-primary text-white"
-                        : "hover:bg-gray-100 hover:text-primary"
-                    }`
-                  }
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{item.icon}</span>
-                    <span className="font-medium">{item.name}</span>
-                  </div>
-                  {item.unreadCount > 0 && (
-                    <span className={`bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center ${
-                      item.path === "/dashboard/chats" ? "" : ""
-                    }`}>
-                      {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                    </span>
+            {menuItems.map((item, index) => {
+              const childActive = isChildActive(item.children);
+              return (
+                <li key={index}>
+                  <NavLink
+                    to={item.path}
+                    end={item.path === "/dashboard"} // Only exact match for Dashboard
+                    className={({ isActive }) =>
+                      getNavClasses(isActive || childActive, false)
+                    }
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{item.icon}</span>
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                    {item.unreadCount > 0 && (
+                      <span className="bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                        {item.unreadCount > 99 ? "99+" : item.unreadCount}
+                      </span>
+                    )}
+                  </NavLink>
+
+                  {item.children?.length > 0 && (
+                    <ul className="mt-2 space-y-2">
+                      {item.children.map((child) => (
+                        <li key={child.path}>
+                          <NavLink
+                            to={child.path}
+                            className={({ isActive }) =>
+                              getNavClasses(isActive, true)
+                            }
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-base">{child.icon}</span>
+                              <span className="font-medium">{child.name}</span>
+                            </div>
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </NavLink>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
 
           <button onClick={logout} className="flex items-center gap-3 px-4 py-3 rounded-full transition-colors duration-200 hover:bg-gray-100 hover:text-primary">

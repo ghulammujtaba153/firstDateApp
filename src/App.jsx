@@ -31,6 +31,7 @@ import UserRoutes from "./components/UserRoutes";
 import GoogleAuth from "./pages/GoogleAuth";
 import FreeScreenProtectedRoutes from "./components/FreeScreenProtectedRoutes";
 import Support from "./pages/dashboard/Support";
+import EventsChat from "./pages/dashboard/EventsChat";
 
 function App() {
   return (
@@ -126,6 +127,14 @@ function App() {
             element={
               <DashboardLayout>
                 <Events />
+              </DashboardLayout>
+            }
+          />
+          <Route
+            path="/dashboard/events/chat"
+            element={
+              <DashboardLayout>
+                <EventsChat />
               </DashboardLayout>
             }
           />

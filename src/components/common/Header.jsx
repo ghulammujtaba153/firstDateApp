@@ -87,6 +87,7 @@ const Header = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
 
       if (response.data?.workflowUrl || response.data?.redirectUrl) {
         // Redirect to DIDIT's hosted verification UI
