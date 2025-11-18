@@ -73,7 +73,7 @@ function App() {
           <Route path="/settings" element={<SettingsPage />} />
 
           <Route
-            path="/dashboard"
+            path="/home"
             element={
               <DashboardLayout>
                 <Home />

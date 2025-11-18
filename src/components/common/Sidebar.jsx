@@ -29,7 +29,7 @@ const Sidebar = () => {
   const { socket, isConnected } = useSocket();
   const location = useLocation();
 
-  // Fetch total unread messages count
+  // Fetch unread messages
   const fetchUnreadCount = useCallback(async () => {
     if (!currentUser?._id) return;
 
@@ -48,22 +48,21 @@ const Sidebar = () => {
     fetchUnreadCount();
 
     if (socket && isConnected) {
-      const handleNewMessage = () => fetchUnreadCount();
-      socket.on("message:new", handleNewMessage);
-      return () => socket.off("message:new", handleNewMessage);
+      socket.on("message:new", fetchUnreadCount);
+      return () => socket.off("message:new", fetchUnreadCount);
     }
   }, [socket, isConnected, fetchUnreadCount]);
 
   useEffect(() => {
     if (location.pathname === "/dashboard/chats" || location.pathname === "/dashboard") {
-      const timer = setTimeout(fetchUnreadCount, 1000);
-      return () => clearTimeout(timer);
+      const t = setTimeout(fetchUnreadCount, 1000);
+      return () => clearTimeout(t);
     }
   }, [location.pathname, fetchUnreadCount]);
 
-  // Menu items
+  // Menu
   const menuItems = [
-    { name: "Dashboard", icon: <FaTachometerAlt />, path: "/dashboard" },
+    { name: "Dashboard", icon: <FaTachometerAlt />, path: "/home" },
     { name: "Chats", icon: <FaPhone />, path: "/dashboard/chats", unreadCount: totalUnreadCount },
     { name: "Matches", icon: <TfiStar />, path: "/dashboard/matches" },
 
@@ -83,20 +82,21 @@ const Sidebar = () => {
     { name: "Privacy Policy", icon: <MdOutlinePrivacyTip />, path: "/dashboard/privacy-policy" },
   ];
 
-  // FIXED: Child active now ONLY activates parent of the matching child
+  // Is any child active?
   const isChildActive = (children = []) =>
     children.some((child) => location.pathname === child.path);
 
+  // Class generator
   const getNavClasses = (isActive, isChild = false) =>
-    `flex items-center justify-between gap-3 cursor-pointer
-     ${isChild ? "px-6 py-2 rounded-xl text-sm" : "px-4 py-3 rounded-full"}
-     transition-colors duration-200
-     ${isActive ? "bg-primary text-white" : "hover:bg-gray-100 hover:text-primary"}
-    `;
+    `flex items-center justify-between cursor-pointer gap-3
+    ${isChild ? "px-6 py-2 rounded-xl text-sm" : "px-4 py-3 rounded-full"}
+    transition-colors duration-200
+    ${isActive ? "bg-primary text-white" : "hover:bg-gray-100 hover:text-primary"}
+  `;
 
   return (
     <>
-      {/* Mobile toggle */}
+      {/* Mobile Menu Button */}
       <button
         className="md:hidden p-3 fixed top-4 left-4 z-50 bg-primary text-white rounded-md"
         onClick={() => setOpen(!open)}
@@ -117,59 +117,64 @@ const Sidebar = () => {
               const childActive = isChildActive(item.children);
               const isOpen = openDropdown === index;
 
-              const isActive =
-                location.pathname === item.path || childActive;
-
               return (
                 <li key={index}>
-                  {/* Parent Item / Dropdown Trigger */}
-                  <div
-                    onClick={
-                      item.children ? () => setOpenDropdown(isOpen ? null : index) : undefined
-                    }
-                    className={getNavClasses(isActive)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{item.icon}</span>
-                      <span className="font-medium">{item.name}</span>
-                    </div>
+                  {/* Dropdown parent */}
+                  {item.children ? (
+                    <>
+                      <div
+                        onClick={() => setOpenDropdown(isOpen ? null : index)}
+                        className={getNavClasses(childActive)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="font-medium">{item.name}</span>
+                        </div>
 
-                    <div className="flex items-center gap-2">
-                      {item.unreadCount > 0 && (
-                        <span className="bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                          {item.unreadCount > 99 ? "99+" : item.unreadCount}
-                        </span>
-                      )}
-
-                      {item.children && (
                         <FaChevronDown
                           className={`transition-transform duration-300 ${
                             isOpen ? "rotate-180" : ""
                           }`}
                         />
-                      )}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* Dropdown Items */}
-                  {item.children && isOpen && (
-                    <ul className="mt-2 space-y-2 pl-6">
-                      {item.children.map((child) => (
-                        <li key={child.path}>
-                          <NavLink
-                            to={child.path}
-                            className={({ isActive }) =>
-                              getNavClasses(isActive, true)
-                            }
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-base">{child.icon}</span>
-                              <span className="font-medium">{child.name}</span>
-                            </div>
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
+                      {isOpen && (
+                        <ul className="mt-2 space-y-2 pl-6">
+                          {item.children.map((child) => (
+                            <li key={child.path}>
+                              <NavLink
+                                to={child.path}
+                                className={({ isActive }) =>
+                                  getNavClasses(isActive, true)
+                                }
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-base">{child.icon}</span>
+                                  <span className="font-medium">{child.name}</span>
+                                </div>
+                              </NavLink>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    // Normal route
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) => getNavClasses(isActive)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+
+                      {item.unreadCount > 0 && (
+                        <span className="bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                          {item.unreadCount > 99 ? "99+" : item.unreadCount}
+                        </span>
+                      )}
+                    </NavLink>
                   )}
                 </li>
               );

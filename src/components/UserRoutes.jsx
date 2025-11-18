@@ -7,7 +7,7 @@ const UserRoutes = () => {
 
   // if user exists -> go to dashboard
   // if not -> go to login
-  return user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
+  return user ? <Navigate to="/home" /> : <Navigate to="/login" />;
 };
 
 export default UserRoutes;

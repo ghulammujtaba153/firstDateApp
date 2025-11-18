@@ -81,14 +81,14 @@ const PartnerPreferences = () => {
 
   const handleSkipVerification = () => {
     setShowVerificationModal(false);
-    navigate('/dashboard');
+    navigate('/home');
   };
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      handleSubmit(); // ✅ Call submit on last step
+      handleSubmit(); // Call submit on last step
     }
   };
 
@@ -102,7 +102,7 @@ const PartnerPreferences = () => {
         <Notification
           title="Preferences Saved!"
           message="Your partner preferences have been successfully saved."
-          link="/dashboard"
+          link="/home"
           linkText="Continue"
           onClose={() => setShow(false)}
         />

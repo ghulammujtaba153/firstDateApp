@@ -4,7 +4,7 @@ import { useAuth } from "../context/authContext";
 
 // A wrapper for free/public routes (login, register, etc.)
 // Redirects to dashboard if user is already authenticated
-const FreeScreenProtectedRoutes = ({ redirectTo = "/dashboard" }) => {
+const FreeScreenProtectedRoutes = ({ redirectTo = "/home" }) => {
   const { user, loading } = useAuth();
 
   console.log("user in free screen route", user);
@@ -21,7 +21,7 @@ const FreeScreenProtectedRoutes = ({ redirectTo = "/dashboard" }) => {
   if (user) {
     // If onboarding is complete, redirect to dashboard
     if (user.onboardingComlete === true) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/home" replace />;
     }
     // If onboarding is not complete, redirect to onboarding
     return <Navigate to="/onboarding" replace />;
