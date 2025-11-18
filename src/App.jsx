@@ -131,7 +131,7 @@ function App() {
             }
           />
           <Route
-            path="/dashboard/events/chat"
+            path="/dashboard/events-chat"
             element={
               <DashboardLayout>
                 <EventsChat />
