@@ -277,7 +277,7 @@ const MatchDetail = () => {
           <div className="lg:col-span-1">
             <div className="relative mb-6">
               <img 
-                src={matchUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"} 
+                src={matchUser.avatar || matchUser.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"} 
                 alt={matchUser.username || "Profile"} 
                 className="w-full aspect-square rounded-2xl object-cover shadow-lg"
               />

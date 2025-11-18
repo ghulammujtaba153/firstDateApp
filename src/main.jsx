@@ -1,17 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
-import { AuthProvider } from './context/authContext.jsx'
-import { SocketProvider } from './context/socketContext.jsx'
+import { AuthProvider } from './context/authContext'
+import { SocketProvider } from './context/socketContext'
+import { ChatProvider } from './context/chatContext'
+import './index.css'
 
-
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
     <AuthProvider>
       <SocketProvider>
-        <App />
+        <ChatProvider>
+          <App />
+        </ChatProvider>
       </SocketProvider>
     </AuthProvider>
-  </StrictMode>,
+  </React.StrictMode>,
 )

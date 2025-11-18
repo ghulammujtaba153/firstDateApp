@@ -8,6 +8,7 @@ import { BASE_URL } from "../config/url";
 import { useAuth } from "../context/authContext";
 import Loader from './../components/common/Loader';
 import MatchRefreshTimer from "../components/dashboard/home/MatchRefreshTimer";
+import OptInSection from "../components/dashboard/home/OptInSection";
 
 
 const data = [
@@ -119,6 +120,8 @@ const Home = () => {
           )}
         </div>
       </div>
+
+      <OptInSection/>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import upload from "../../utils/upload";
 
-const PhotosSection = ({ value = [], onChange }) => {
+const PhotosSection = ({ value = [], onChange, setDisable }) => {
   const [images, setImages] = useState([
     ...value,
     ...Array(6 - value.length).fill(null),
@@ -78,6 +78,7 @@ const PhotosSection = ({ value = [], onChange }) => {
 
   const handleImageChange = async (index, file) => {
     if (!file) return;
+    setDisable(true);
 
     isUploadingRef.current = true;
 
@@ -102,6 +103,7 @@ const PhotosSection = ({ value = [], onChange }) => {
 
       // Upload to Cloudinary
       const url = await upload(file);
+      setDisable(false);
 
       if (url) {
         // Use functional update to ensure we have the latest state
@@ -129,6 +131,8 @@ const PhotosSection = ({ value = [], onChange }) => {
           return newImages;
         });
 
+        
+
         // Clear loading state
         setLoadingStates(prev => {
           const newStates = [...prev];
@@ -136,8 +140,11 @@ const PhotosSection = ({ value = [], onChange }) => {
           return newStates;
         });
       }
+
+      setDisable(false);
     } catch (error) {
       console.error("Upload failed:", error);
+      setDisable(false);
       // Clear loading state on error
       setLoadingStates(prev => {
         const newStates = [...prev];
@@ -152,6 +159,7 @@ const PhotosSection = ({ value = [], onChange }) => {
         return newImages;
       });
     } finally {
+      setDisable(false);
       // Allow syncing again after a short delay
       setTimeout(() => {
         isUploadingRef.current = false;

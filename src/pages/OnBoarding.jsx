@@ -27,6 +27,7 @@ const OnBoarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [disable, setDisable] = useState(false);
 
   // 🔹 Centralized form data that matches your Mongoose schema
   const [formData, setFormData] = useState({
@@ -173,6 +174,7 @@ const OnBoarding = () => {
             <PhotosSection
               value={formData.images}
               onChange={(val) => setFormData({ ...formData, images: val })}
+              setDisable={setDisable}
             />
           )}
           {currentStep === 10 && (
@@ -214,7 +216,8 @@ const OnBoarding = () => {
           {/* Navigation Buttons */}
           <div className="flex flex-col gap-4 mt-6">
             <button
-              disabled={loading}
+              disabled={loading || disable}
+
               onClick={() => {
                 if (currentStep < totalSteps) {
                   setCurrentStep((prev) => prev + 1);

@@ -6,6 +6,7 @@ import { BASE_URL } from "../../../config/url";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 import Switch from "react-switch";
+import { useChatContext } from '../../../context/chatContext'
 
 const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
   const [sentRequest, setSentRequest] = useState(null);
@@ -15,13 +16,16 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
     send: false,
     accept: false,
   });
-  const [chatStatus, setChatStatus] = useState(chat?.status || "active");
-  const [chatStatusLoading, setChatStatusLoading] = useState(false);
   const { user: currentUser } = useAuth();
   const { socket } = useSocket();
   const location = useLocation();
   const isEventsContext = location.pathname.includes("/dashboard/events-chat");
   const isPrivateContext = location.pathname.includes("/dashboard/chats");
+  const { updateChatStatus, getChatStatus } = useChatContext()
+  const [chatStatusLoading, setChatStatusLoading] = useState(false)
+  const chatStatus = getChatStatus(chat?._id) || (chat?.status || 'active')
+
+  console.log("ChatHeader Rendered:", chat)
 
   const normalizeId = (value) => {
     if (!value) return null;
@@ -32,6 +36,12 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
     }
     return null;
   };
+
+  // Check if current user is the blocker
+  const isCurrentUserBlocker = chat?.blockedBy && normalizeId(chat.blockedBy) === normalizeId(currentUser?._id);
+  
+  // Check if chat is blocked by someone
+  const isChatBlocked = !!chat?.blockedBy;
 
   const fetchRequests = useCallback(async () => {
     if (!isEventsContext || !otherParticipant?._id || !currentUser?._id) return;
@@ -67,9 +77,12 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // Update when chat changes
   useEffect(() => {
-    setChatStatus(chat?.status || "active");
-  }, [chat?._id, chat?.status]);
+    if (chat?._id && chat?.status) {
+      updateChatStatus(chat._id, chat.status)
+    }
+  }, [chat?._id, chat?.status, updateChatStatus])
 
   // Listen for real-time match request events
   useEffect(() => {
@@ -156,20 +169,20 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
 
   // Listen for real-time chat status updates
   useEffect(() => {
-    if (!socket || !isPrivateContext || !chat?._id) return;
+    if (!socket || !isPrivateContext || !chat?._id) return
 
     const handleChatStatusUpdate = (data) => {
-      if (data.chatId === chat._id) {
-        setChatStatus(data.status);
+      if (data.chatId === chat._id && data.status) {
+        updateChatStatus(chat._id, data.status)
       }
-    };
+    }
 
-    socket.on('chat:status-updated', handleChatStatusUpdate);
+    socket.on('chat:status-updated', handleChatStatusUpdate)
 
     return () => {
-      socket.off('chat:status-updated', handleChatStatusUpdate);
-    };
-  }, [socket, isPrivateContext, chat?._id]);
+      socket.off('chat:status-updated', handleChatStatusUpdate)
+    }
+  }, [socket, isPrivateContext, chat?._id, updateChatStatus])
 
   const sendMatchRequest = async () => {
     if (!isEventsContext || !currentUser?._id || !otherParticipant?._id) return;
@@ -209,30 +222,37 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
   };
 
   const handleChatStatusToggle = async (checked) => {
-    if (!isPrivateContext || !chat?._id) return;
-    const previousStatus = chatStatus;
-    const nextStatus = checked ? "active" : "inactive";
+    if (!isPrivateContext || !chat?._id) return
+    const previousStatus = chatStatus
+    const nextStatus = checked ? "active" : "inactive"
 
-    if (previousStatus === nextStatus) return;
+    if (previousStatus === nextStatus) return
 
-    setChatStatus(nextStatus);
-    setChatStatusLoading(true);
+    // Optimistically update UI
+    updateChatStatus(chat._id, nextStatus)
+    setChatStatusLoading(true)
+    
     try {
       const response = await axios.post(`${BASE_URL}/api/chat/update-status`, {
         chatId: chat._id,
-        userId: currentUser._id, 
+        userId: currentUser._id,
         status: nextStatus,
-      });
-      const updatedStatus = response.data?.status || nextStatus;
-      setChatStatus(updatedStatus);
-      // Backend will emit socket events automatically
+      })
+      
+      // Confirm with server response
+      const updatedStatus = response.data?.status || nextStatus
+      updateChatStatus(chat._id, updatedStatus)
+      
+      console.log("✅ Chat status updated:", updatedStatus)
     } catch (error) {
-      console.error("Unable to update chat status", error);
-      setChatStatus(previousStatus);
+      console.error("Unable to update chat status", error)
+      // Revert on error
+      updateChatStatus(chat._id, previousStatus)
+      alert("Failed to update chat status. Please try again.")
     } finally {
-      setChatStatusLoading(false);
+      setChatStatusLoading(false)
     }
-  };
+  }
 
   const renderStatus = () => {
     if (!isEventsContext) return "";
@@ -257,11 +277,32 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
     !sentRequest &&
     (!receivedRequest || receivedRequest.status === "rejected");
 
+  const getBlockedStatusText = () => {
+    if (!isChatBlocked) return null;
+    
+    if (isCurrentUserBlocker) {
+      return "You blocked this chat";
+    } else {
+      return `Blocked by ${otherParticipant?.username || "participant"}`;
+    }
+  };
+
   return (
     <>
       {isEventsContext && (
         <div className="text-center py-1 mb-2 rounded-md bg-gray-100 text-sm font-medium text-gray-700">
           {renderStatus()}
+        </div>
+      )}
+
+      {/* Blocked status indicator */}
+      {isChatBlocked && (
+        <div className={`text-center py-2 mb-2 rounded-md text-sm font-medium ${
+          isCurrentUserBlocker
+            ? "bg-yellow-100 text-yellow-800"
+            : "bg-red-100 text-red-800"
+        }`}>
+          {getBlockedStatusText()}
         </div>
       )}
 
@@ -319,22 +360,27 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
               </span>
               <Switch
                 checked={chatStatus !== "inactive"}
-                disabled={chatStatusLoading}
+                disabled={chatStatusLoading || (isChatBlocked && !isCurrentUserBlocker)}
                 onChange={handleChatStatusToggle}
                 onColor="#22c55e"
                 offColor="#f97316"
                 uncheckedIcon={false}
                 checkedIcon={false}
+                title={
+                  isChatBlocked && !isCurrentUserBlocker
+                    ? "You cannot modify this chat - it has been blocked"
+                    : ""
+                }
               />
             </div>
           )}
 
-          <button onClick={() => onInitiateCall("audio")}>
-            <FiPhone size={20} />
+          <button onClick={() => onInitiateCall("audio")} disabled={isChatBlocked && !isCurrentUserBlocker}>
+            <FiPhone size={20} className={isChatBlocked && !isCurrentUserBlocker ? "opacity-50 cursor-not-allowed" : ""} />
           </button>
 
-          <button onClick={() => onInitiateCall("video")}>
-            <FiVideo size={20} />
+          <button onClick={() => onInitiateCall("video")} disabled={isChatBlocked && !isCurrentUserBlocker}>
+            <FiVideo size={20} className={isChatBlocked && !isCurrentUserBlocker ? "opacity-50 cursor-not-allowed" : ""} />
           </button>
         </div>
       </div>

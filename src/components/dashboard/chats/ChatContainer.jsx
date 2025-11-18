@@ -5,6 +5,7 @@ import { BASE_URL } from '../../../config/url'
 import axios from 'axios'
 import { useAuth } from '../../../context/authContext'
 import { useSocket } from '../../../context/socketContext'
+import { useChatContext } from '../../../context/chatContext'
 import ChatHeader from './ChatHeader'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
@@ -12,6 +13,7 @@ import MessageInput from './MessageInput'
 const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesRead }) => {
   const { user: currentUser } = useAuth()
   const { socket, isConnected } = useSocket()
+  const { getChatStatus } = useChatContext()
   const navigate = useNavigate()
   const [recording, setRecording] = useState(false)
   const [messages, setMessages] = useState([])
@@ -28,6 +30,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const messagesEndRef = useRef(null)
+  const [showInputField, setShowInputField] = useState(true)
 
   console.log("chats log here", selectedChat)
 
@@ -735,6 +738,9 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     }
   }
 
+  // Get chat status from context
+  const chatStatus = getChatStatus(selectedChat?._id) || (selectedChat?.status || 'active')
+
   // Empty state when no chat is selected
   if (!selectedChat) {
     return (
@@ -770,22 +776,25 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
         messagesEndRef={messagesEndRef}
       />
 
-      {selectedChat.status == "active" && <MessageInput
-        messageInput={messageInput}
-        setMessageInput={setMessageInput}
-        sending={sending}
-        uploadingFile={uploadingFile}
-        selectedFile={selectedFile}
-        filePreview={filePreview}
-        uploadProgress={uploadProgress}
-        recording={recording}
-        fileInputRef={fileInputRef}
-        onFileSelect={handleFileSelect}
-        onRemoveFile={removeSelectedFile}
-        onSendFile={handleSendFile}
-        onSendMessage={handleSendMessage}
-        onMicClick={handleMicClick}
-      />}
+      {/* Show input only if chat is active */}
+      {chatStatus === "active" && (
+        <MessageInput
+          messageInput={messageInput}
+          setMessageInput={setMessageInput}
+          sending={sending}
+          uploadingFile={uploadingFile}
+          selectedFile={selectedFile}
+          filePreview={filePreview}
+          uploadProgress={uploadProgress}
+          recording={recording}
+          fileInputRef={fileInputRef}
+          onFileSelect={handleFileSelect}
+          onRemoveFile={removeSelectedFile}
+          onSendFile={handleSendFile}
+          onSendMessage={handleSendMessage}
+          onMicClick={handleMicClick}
+        />
+      )}
     </div>
   )
 }
