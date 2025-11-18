@@ -236,7 +236,7 @@ const Header = () => {
         {/* Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <img
-            src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"} 
+            src={user?.avatar || user.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"} 
             alt="profile"
             className="rounded-full w-10 h-10 cursor-pointer"
             onClick={() => setDropdownOpen(!dropdownOpen)}

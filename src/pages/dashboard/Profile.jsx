@@ -14,6 +14,10 @@ import {
   FaUniversity,
   FaBook,
   FaRulerVertical,
+  FaCheckCircle,
+  FaMoon,
+  FaHammer,
+  FaStar,
 } from "react-icons/fa";
 
 import { useAuth } from '../../context/authContext';
@@ -33,6 +37,8 @@ const Profile = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editMode, setEditMode] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [locationName, setLocationName] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   // Profile edit state
   const [profileData, setProfileData] = useState({
@@ -175,15 +181,98 @@ const Profile = () => {
     return age;
   };
 
+  // Format DOB to readable date
+  const formatDate = (dob) => {
+    if (!dob) return '';
+    const date = new Date(dob);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]}, ${date.getDate()}, ${date.getFullYear()}`;
+  };
+
+  // Reverse geocode coordinates to get city/town name
+  const reverseGeocode = async (latitude, longitude) => {
+    // Check if we already have this location cached
+    const cacheKey = `${latitude.toFixed(4)}_${longitude.toFixed(4)}`;
+    const cached = sessionStorage.getItem(`location_${cacheKey}`);
+    
+    if (cached) {
+      setLocationName(cached);
+      return;
+    }
+
+    try {
+      setLocationLoading(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'FirstDateApp/1.0' // Required by Nominatim
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Geocoding failed');
+      }
+      
+      const data = await response.json();
+      
+      // Extract city/town name from address
+      const address = data.address;
+      let locationText = '';
+      
+      if (address.city) {
+        locationText = address.city;
+      } else if (address.town) {
+        locationText = address.town;
+      } else if (address.village) {
+        locationText = address.village;
+      } else if (address.municipality) {
+        locationText = address.municipality;
+      } else if (address.county) {
+        locationText = address.county;
+      } else if (address.state) {
+        locationText = address.state;
+      } else if (address.country) {
+        locationText = address.country;
+      }
+      
+      // If we have city/town, optionally add state/country for context
+      if (locationText && address.state && locationText !== address.state) {
+        locationText = `${locationText}, ${address.state}`;
+      } else if (locationText && address.country && !address.state) {
+        locationText = `${locationText}, ${address.country}`;
+      }
+      
+      const finalLocation = locationText || 'Unknown location';
+      setLocationName(finalLocation);
+      
+      // Cache the result
+      sessionStorage.setItem(`location_${cacheKey}`, finalLocation);
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      setLocationName(null); // Fallback to coordinates
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  // Fetch location name when coordinates are available
+  useEffect(() => {
+    if (user?.location?.latitude && user?.location?.longitude) {
+      reverseGeocode(user.location.latitude, user.location.longitude);
+    }
+  }, [user?.location]);
+
   return (
     <>
       <div className="bg-white rounded-3xl shadow-xl overflow-hidden relative">
         {/* Header */}
-        <div className="bg-gradient-to-r from-pink-50 to-blue-50 px-6 py-4 flex justify-between items-center">
+        <div className=" px-6 py-4 flex justify-between items-center">
           <h1 className="text-lg font-semibold text-gray-800">My Profile</h1>
           <button
             onClick={() => setShowEditModal(true)}
-            className="bg-pink-400 hover:bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
+            className="bg-primary hover:bg-pink-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
           >
             Edit Profile
           </button>
@@ -193,7 +282,7 @@ const Profile = () => {
           {/* Profile Image - Wide at top */}
           <div className="relative mb-8">
             <img
-              src={user.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=400&fit=crop&crop=center"}
+              src={user.avatar || user.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=400&fit=crop&crop=center"}
               alt="Profile"
               className="w-full h-85 rounded-2xl object-cover shadow-lg"
             />
@@ -205,93 +294,175 @@ const Profile = () => {
           </div>
 
           {/* All Details in Single Column */}
-          <div className="space-y-8">
+          <div className="space-y-2">
 
             {/* Basic Information */}
-            <div className="bg-gray-50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+            <div className="grid grid-cols-1 gap-x-8 gap-y-6 p-6">
+
+              <div className='flex flex-col gap-2'>
+
+                <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                  {user?.username} {user.dob && `(${calculateAge(user.dob)})`} {user.verified && <FaCheckCircle className="text-primary" />}
+                </h3>
                 
-                Basic Information
-              </h2>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Username */}
-                <div className="flex items-center text-gray-600 gap-3">
-                  <FaUser className=" w-5 h-5" />
-                  <span className="text-sm">{user.username || "Not set"}</span>
-                </div>
 
+
+
+
+
+              <div className='flex itms-center gap-4'>
                 {/* Gender */}
                 <div className="flex items-center text-gray-600 gap-3">
                   <FaUser className="w-5 h-5" />
                   <span className="text-sm capitalize">{user.gender || "Not set"}</span>
                 </div>
-
                 {/* Age */}
-                <div className="flex items-center text-gray-600 gap-3">
+                <div className="flex items-center text-gray-600 gap-3 ">
                   <FaBirthdayCake className="w-5 h-5" />
                   <span className="text-sm">{calculateAge(user.dob)} years</span>
                 </div>
 
                 {/* Height */}
-                <div className="flex items-center text-gray-600 gap-3">
+                <div className="flex items-center text-gray-600 gap-3 ">
                   <FaRulerVertical className="w-5 h-5" />
                   <span className="text-sm">{user.height ? `${user.height} cm` : "Not set"}</span>
                 </div>
 
-                {/* Phone */}
-                <div className="flex items-center text-gray-600 gap-3">
-                  <FaPhone className="w-5 h-5" />
-                  <span className="text-sm">{user.phone || "Not set"}</span>
-                </div>
 
-                {/* Location */}
-                <div className="flex items-center text-gray-600 gap-3">
-                  <FaMapMarkerAlt className="w-5 h-5" />
-                  <span className="text-sm">
-                    {user.location
-                      ? `${user.location.latitude}, ${user.location.longitude}`
-                      : "Not set"}
-                  </span>
-                </div>
               </div>
-            </div>
 
-            {/* Education & Career */}
-            <div className="bg-gray-50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                <FaGraduationCap className="w-5 h-5 mr-2" />
-                Education & Career
-              </h2>
+              <div className='flex itms-center gap-4'>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Religion */}
+                <div className="flex items-center text-gray-600 gap-3 ">
+                  <FaMoon className="w-5 h-5" />
+                  <span className="text-sm">{user.religion || "Not set"}</span>
+                </div>
+
+                {/* Politics */}
+                <div className="flex items-center text-gray-600 gap-3 ">
+                  <FaHammer className="w-5 h-5" />
+                  <span className="text-sm">{user.politics || "Not set"}</span>
+                </div>
+
                 {/* Occupation */}
                 <div className="flex items-center text-gray-600 gap-3">
-                  <FaBriefcase className=" w-5 h-5" />
+                  <FaBriefcase className="w-5 h-5" />
                   <span className="text-sm">{user.education?.occupation || "Not set"}</span>
                 </div>
 
+
+
+              </div>
+
+
+              <div className='flex itms-center gap-4'>
                 {/* University */}
-                <div className="flex items-center text-gray-600 gap-3">
+                <div className="flex items-center text-gray-600 gap-3 ">
                   <FaUniversity className="w-5 h-5" />
                   <span className="text-sm">{user.education?.university || "Not set"}</span>
                 </div>
 
-                {/* Field */}
-                <div className="flex items-center text-gray-600 gap-3">
-                  <FaBook className="w-5 h-5" />
-                  <span className="text-sm">{user.education?.field || "Not set"}</span>
+
+                {/* Location */}
+                <div className="flex items-center text-gray-600 gap-3 ">
+                  <FaMapMarkerAlt className="w-5 h-5" />
+                  <span className="text-sm">
+                    {locationLoading 
+                      ? "Loading location..." 
+                      : locationName 
+                        ? locationName 
+                        : user.location
+                          ? `${user.location.latitude.toFixed(2)}, ${user.location.longitude.toFixed(2)}`
+                          : "Not set"}
+                  </span>
                 </div>
               </div>
+
+
+
+
+
             </div>
 
 
+
+            <div className='flex flex-col gap-2 p-6'>
+
+              <h3 className="text-2xl font-bold mb-4 flex items-center">
+
+                About Me
+              </h3>
+              <p className='text-sm text-gray-600 '> Lorem ipsum, dolor sit amet consectetur adipisicing elit. Inventore impedit soluta in quia qui, est, iure illum quibusdam id placeat eum ratione, quis omnis aliquam quaerat ipsa? Hic, nostrum odio!</p>
+              <div className='w-full h-[1px] bg-gray-200 mt-10'></div>
+            </div>
+
+
+
+
+
+            {/* Family & Beliefs */}
+            <div className="grid grid-cols-1 gap-2">
+              {/* Family Preferences */}
+              <div className="p-6">
+                <h3 className="text-2xl font-bold mb-4 flex items-center">
+
+                  Kids or Family
+                </h3>
+
+                <div className="flex items-center gap-6 w-full">
+                  {/* Do you have kids */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 whitespace-nowrap">Do you have Kids?</span>
+                    <span className="px-3 py-1 rounded-full text-sm font-medium text-primary">
+                      {user.family?.haveKids ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+
+                  <div className="w-px h-5 bg-gray-400"></div>
+
+                  {/* Do you want kids */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 whitespace-nowrap">Do you want Kids?</span>
+                    <span className="px-3 py-1 rounded-full text-sm font-medium text-primary">
+                      {user.family?.wantKids ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                </div>
+
+
+              </div>
+              <div className='w-full h-[1px] bg-gray-200 mt-10'></div>
+
+
+
+            </div>
+
+            {/* Chat Openers */}
+            {user.chatOpeners && user.chatOpeners.length > 0 && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-4">Icebreakers</h2>
+                <div className="space-y-4">
+                  {user.chatOpeners.map((opener, index) => (
+                    <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-pink-100">
+                      <p className="text-sm text-primary italic">{opener}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
+
+
             {/* Body Type & Health */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
               {/* Body Type */}
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                  <FaRunning className="w-5 h-5 mr-2" />
+              <div className=" p-6">
+                <h3 className="text-2xl font-bold  mb-4 flex items-center">
+
                   Body Type
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -299,7 +470,7 @@ const Profile = () => {
                     user.bodyType.map((item) => (
                       <span
                         key={item}
-                        className="px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-medium border border-blue-200"
+                        className="px-4 py-2 rounded-full text-gray-700 text-sm font-medium border border-gray-200"
                       >
                         {item}
                       </span>
@@ -309,11 +480,12 @@ const Profile = () => {
                   )}
                 </div>
               </div>
+              <div className='w-full h-[1px] bg-gray-200 mt-5'></div>
 
               {/* Health Info */}
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                  <FaSmoking className="w-5 h-5 mr-2" />
+              <div className=" p-6">
+                <h3 className="text-2xl font-bold mb-4 flex items-center">
+
                   Health Info
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -321,7 +493,7 @@ const Profile = () => {
                     user.healthInfo.map((item) => (
                       <span
                         key={item}
-                        className="px-4 py-2 rounded-full bg-green-50 text-green-700 text-sm font-medium border border-green-200"
+                        className="px-4 py-2 rounded-full text-gray-700 text-sm font-medium border border-gray-200"
                       >
                         {item}
                       </span>
@@ -331,12 +503,13 @@ const Profile = () => {
                   )}
                 </div>
               </div>
+              <div className='w-full h-[1px] bg-gray-200 mt-5'></div>
             </div>
 
             {/* Hobbies & Interests */}
             <div className="bg-gray-50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                <FaHeart className="w-5 h-5 mr-2" />
+              <h2 className="text-2xl font-bold mb-4 flex items-center">
+
                 Hobbies & Interests
               </h2>
               <div className="flex flex-wrap gap-3">
@@ -344,7 +517,7 @@ const Profile = () => {
                   user.hobbies.map((item) => (
                     <span
                       key={item}
-                      className="px-4 py-2 rounded-full bg-pink-50 text-pink-700 text-sm font-medium border border-pink-200"
+                      className="px-4 py-2 rounded-full text-gray-700 text-sm font-medium border border-gray-200"
                     >
                       {item.replace('_', ' ')}
                     </span>
@@ -355,72 +528,7 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Family & Beliefs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Family Preferences */}
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                  <FaChild className="w-5 h-5 mr-2" />
-                  Family Preferences
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Has Kids:</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.family?.haveKids
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                      }`}>
-                      {user.family?.haveKids ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Wants Kids:</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.family?.wantKids
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                      }`}>
-                      {user.family?.wantKids ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Beliefs & Values */}
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                  <FaInfoCircle className="w-5 h-5 mr-2" />
-                  Beliefs & Values
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Religion:</span>
-                    <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium capitalize">
-                      {user.religion || 'Not set'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Politics:</span>
-                    <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium capitalize">
-                      {user.politics || 'Not set'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Chat Openers */}
-            {user.chatOpeners && user.chatOpeners.length > 0 && (
-              <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Chat Openers</h2>
-                <div className="space-y-4">
-                  {user.chatOpeners.map((opener, index) => (
-                    <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-pink-100">
-                      <p className="text-sm text-gray-700 italic">"{opener}"</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
