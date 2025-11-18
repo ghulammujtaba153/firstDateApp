@@ -137,7 +137,7 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
       const chat = response.data;
 
       // Navigate to chat room
-      navigate('/dashboard/events/chat', {
+      navigate('/dashboard/events-chat', {
         state: {
           chatId: chat._id,
           userId: participantId,

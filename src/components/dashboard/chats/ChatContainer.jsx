@@ -29,6 +29,8 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
   const audioChunksRef = useRef([])
   const messagesEndRef = useRef(null)
 
+  console.log("chats log here", selectedChat)
+
   // Get the other participant
   const otherParticipant = useMemo(() => {
     if (!selectedChat?.participants || !currentUserId) return null
@@ -768,7 +770,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
         messagesEndRef={messagesEndRef}
       />
 
-      <MessageInput
+      {selectedChat.status == "active" && <MessageInput
         messageInput={messageInput}
         setMessageInput={setMessageInput}
         sending={sending}
@@ -783,7 +785,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
         onSendFile={handleSendFile}
         onSendMessage={handleSendMessage}
         onMicClick={handleMicClick}
-      />
+      />}
     </div>
   )
 }

@@ -61,7 +61,7 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
             >
               <div className="relative flex-shrink-0">
                 <img
-                  src={user.avatar}
+                  src={user.avatar || user.images[0]}
                   alt={user.name}
                   className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover"
                 />
