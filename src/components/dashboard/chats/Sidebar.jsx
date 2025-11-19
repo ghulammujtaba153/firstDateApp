@@ -41,8 +41,7 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
           {users.filter((u) => u.online).map((user) => (
             
             <div key={user.id} className="relative flex-shrink-0">
-              <p>{user.images[0]}</p>
-              <p>line</p>
+              
               <img
                 src={user.avatar || user.images[0]}
                 alt={user.name}
@@ -71,7 +70,7 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
             >
 
               {/* <p>{user.images[0]}</p> */}
-              <p>line</p>
+              
               <div className="relative flex-shrink-0">
                 
                 <img
