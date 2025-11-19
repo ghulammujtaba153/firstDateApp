@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../../context/authContext';
 import { BASE_URL } from '../../config/url';
 import axios from 'axios';
+import ImagesCarousel from '../../components/dashboard/profile/ImagesCarousel';
 
 // Import modal components
 import {
@@ -280,18 +281,18 @@ const Profile = () => {
 
         <div className="p-6">
           {/* Profile Image - Wide at top */}
-          <div className="relative mb-8">
+          {user.avatar && <div className="relative mb-8">
             <img
               src={user.avatar || user.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=400&fit=crop&crop=center"}
               alt="Profile"
               className="w-full h-85 rounded-2xl object-cover shadow-lg"
             />
-            {user.images && user.images.length > 0 && (
-              <div className="absolute bottom-4 left-4 bg-white rounded-lg px-3 py-2 shadow-md">
-                <span className="text-sm font-medium text-gray-600">{user.images.length} photos</span>
-              </div>
+            
+          </div>}
+
+          {user.images && user.images.length > 0 && (
+              <ImagesCarousel images={user.images}/>
             )}
-          </div>
 
           {/* All Details in Single Column */}
           <div className="space-y-2">
@@ -507,7 +508,7 @@ const Profile = () => {
             </div>
 
             {/* Hobbies & Interests */}
-            <div className="bg-gray-50 rounded-2xl p-6">
+            <div className="p-6">
               <h2 className="text-2xl font-bold mb-4 flex items-center">
 
                 Hobbies & Interests

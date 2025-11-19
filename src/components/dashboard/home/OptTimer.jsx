@@ -20,7 +20,7 @@ function getNextThursdayMidnight(now = new Date()) {
   return nextThursday;
 }
 
-const OptTimer = ({ user }) => {
+const OptTimer = ({ user, optedIn=true }) => {
   const [timeLeft, setTimeLeft] = useState(null);
 
   useEffect(() => {
@@ -51,12 +51,16 @@ const OptTimer = ({ user }) => {
   return (
     <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg shadow-sm border border-primary/20 p-4 md:p-6 my-4">
       <div className="text-center mb-4">
-        <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-1">
+        {optedIn && <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-1">
           Waiting for your match...
-        </h3>
-        <p className="text-sm text-gray-600">
+        </h3>}
+        {!optedIn && <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-1">
+          Your opt-in will activate in the next match cycle. Thanks for your patience!
+        </h3>}
+
+        {optedIn && <p className="text-sm text-gray-600">
           Your match will be revealed in:
-        </p>
+        </p>}
       </div>
       <div className="flex items-center justify-center gap-2 md:gap-4">
         {/* Days */}
@@ -116,9 +120,9 @@ const OptTimer = ({ user }) => {
           </div>
         </div>
       </div>
-      <div className="text-xs text-blue-500 mt-4 text-center">
+      {optedIn && <div className="text-xs text-blue-500 mt-4 text-center">
         (Matches are revealed every Thursday at 12:00 AM)
-      </div>
+      </div>}
     </div>
   );
 };

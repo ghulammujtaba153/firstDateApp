@@ -313,7 +313,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
           </button>
 
           <img
-            src={otherParticipant?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"}
+            src={otherParticipant?.avatar || otherParticipant.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"}
             className="w-10 h-10 rounded-full object-cover"
           />
 

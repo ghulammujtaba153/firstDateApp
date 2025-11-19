@@ -5,8 +5,9 @@ import { BASE_URL } from "../../../config/url";
 import { useAuth } from "../../../context/authContext";
 import { useSocket } from "../../../context/socketContext";
 import MatchCard from "./MatchCard";
-import OPTMatchCard from "./OPTMatchCard";
 import OptTimer from "./OptTimer";
+import OptClosingTimer from "./OptClosingTimer";
+
 
 const OptInSection = () => {
   const { user } = useAuth();
@@ -333,6 +334,13 @@ const OptInSection = () => {
         />
       </div>
 
+      {/* Show closing countdown during active window */}
+      {windowState === 'active' && (
+        <div className="mt-3">
+          <OptClosingTimer />
+        </div>
+      )}
+
 
       {/* Show OptTimer only if locked, optedIn, and waiting for match */}
       {windowState === "locked" && optedIn && matches.length === 0 && (
@@ -341,9 +349,10 @@ const OptInSection = () => {
 
       {/* Lock message */}
       {isDisabled && !optedIn && buttonState.includes("Closed") && (
-        <p className="text-sm text-gray-500 mt-2">
-          Opt-In is currently locked. Please check again on Thursday.
-        </p>
+        // <p className="text-sm text-gray-500 mt-2">
+        //   Opt-In is currently locked. Please check again on Thursday.
+        // </p>
+        <OptTimer user={user} optedIn={false} />
       )}
 
       {/* Revealing message */}
@@ -391,6 +400,7 @@ const OptInSection = () => {
           )}
         </div>
       )}
+
     </div>
   );
 };

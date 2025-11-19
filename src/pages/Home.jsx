@@ -87,14 +87,15 @@ const Home = () => {
           <StickerCard item={item} key={item.id} />
         ))}
       </div>
+      <OptInSection/>
 
       {/* Timer Section */}
-      {user && (
+      {/* {user && (
         <MatchRefreshTimer 
           userId={user._id || user.id} 
           onTimerComplete={handleTimerComplete}
         />
-      )}
+      )} */}
 
       <div className="flex flex-col gap-4 shadow-lg p-4 rounded-lg">
         <div className="flex justify-between items-center">
@@ -121,7 +122,7 @@ const Home = () => {
         </div>
       </div>
 
-      <OptInSection/>
+      
     </div>
   );
 };

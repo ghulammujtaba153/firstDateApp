@@ -202,7 +202,7 @@ const ParticipantsGallery = ({ isOpen, onClose, eventId, event }) => {
       // Populated participant
       participantId = participant._id?.toString() || participant.toString();
       username = participant.username || participant.email?.split('@')[0] || 'User';
-      avatar = participant.avatar || participant.profilePicture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
+      avatar = participant.avatar || participant.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face";
       email = participant.email;
     }
 

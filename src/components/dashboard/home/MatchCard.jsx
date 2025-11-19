@@ -177,10 +177,10 @@ const MatchCard = ({ item, userLocation }) => {
       onClick={handleCardClick}
     >
       {/* Background Image or Icon Avatar */}
-      {item.avatar && !imageError ? (
+      {item.avatar || item.images.length>0 ? (
         <>
           <img
-            src={item.avatar}
+            src={item.avatar || item.images[0]}
             alt={item.username || "User"}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
               imageLoading ? 'opacity-0' : 'opacity-100'
