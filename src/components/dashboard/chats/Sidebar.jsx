@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { FiSearch } from "react-icons/fi";
 
+
 const Sidebar = ({ users, selectedUser, onUserSelect }) => {
   const [search, setSearch] = useState("");
 
   console.log("Sidebar users:", users);
 
   const filteredUsers = users.filter((user) =>
-    
+
     user.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -39,9 +40,9 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
         <p className="text-base md:text-lg font-semibold mb-3 md:mb-4">Now Active</p>
         <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2">
           {users.filter((u) => u.online).map((user) => (
-            
+
             <div key={user.id} className="relative flex-shrink-0">
-              
+
               <img
                 src={user.avatar || user.images[0]}
                 alt={user.name}
@@ -62,17 +63,16 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
             <div
               key={user.id || user.chatId}
               onClick={() => handleUserClick(user)}
-              className={`flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${
-                selectedUser?.id === user.id || selectedUser?._id === user.chatId
+              className={`flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${selectedUser?.id === user.id || selectedUser?._id === user.chatId
                   ? "bg-primary/30"
                   : "hover:bg-primary/20"
-              }`}
+                }`}
             >
 
               {/* <p>{user.images[0]}</p> */}
-              
+
               <div className="relative flex-shrink-0">
-                
+
                 <img
                   src={user.avatar || user.images[0]}
                   alt={user.name}
