@@ -161,6 +161,7 @@ const Chats = () => {
       userId: otherParticipant?._id,
       name: otherParticipant?.username || 'Unknown User',
       avatar: otherParticipant?.avatar || otherParticipant?.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face",
+      status: chat.status,
       online: isOnline,
       lastMessage: lastMessageText,
       hasUnread: hasUnread,
@@ -226,6 +227,51 @@ const Chats = () => {
     }
   }, [socket, isConnected, currentUser?._id, updateChatLastMessage])
 
+  // Listen for chat status updates to update sidebar in real-time
+  useEffect(() => {
+    if (!socket || !isConnected) return
+
+    const handleChatStatusUpdate = (data) => {
+      const { chatId, status, blockedBy } = data
+
+      if (!chatId) return
+
+      console.log('Chat status updated:', { chatId, status, blockedBy })
+
+      // Update the chat status in the chats list
+      setChats(prevChats => {
+        return prevChats.map(chat => {
+          if (chat._id === chatId) {
+            return {
+              ...chat,
+              status: status,
+              blockedBy: blockedBy
+            }
+          }
+          return chat
+        })
+      })
+
+      // Update selectedChat if it's the current chat
+      setSelectedChat(prevSelected => {
+        if (prevSelected?._id === chatId) {
+          return {
+            ...prevSelected,
+            status: status,
+            blockedBy: blockedBy
+          }
+        }
+        return prevSelected
+      })
+    }
+
+    socket.on('chat:status-updated', handleChatStatusUpdate)
+
+    return () => {
+      socket.off('chat:status-updated', handleChatStatusUpdate)
+    }
+  }, [socket, isConnected])
+
   // Global call invitation handler - works even when no chat is selected
   useEffect(() => {
     if (!socket || !isConnected || !currentUser?._id) return
@@ -290,6 +336,8 @@ const Chats = () => {
         const callerId = globalIncomingCall.from?.toString()
         return participantId === callerId
       })
+
+
 
       if (!otherParticipant) {
         console.error('Other participant not found')

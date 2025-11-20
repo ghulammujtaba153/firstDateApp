@@ -7,18 +7,68 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
 
   console.log("Sidebar users:", users);
 
-  const filteredUsers = users.filter((user) =>
 
+  const inactiveUsers = users.filter((user) => user?.status === "inactive");
+  const activeUsers = users.filter((user) => user?.status !== "inactive");
+
+  const filteredActiveUsers = activeUsers.filter((user) =>
+    user.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredInactiveUsers = inactiveUsers.filter((user) =>
     user.name.toLowerCase().includes(search.toLowerCase())
   );
 
   useEffect(() => {
-    console.log("Filtered users:", filteredUsers);
-  }, [filteredUsers]);
+    console.log("Active users:", filteredActiveUsers);
+    console.log("Inactive users:", filteredInactiveUsers);
+  }, [filteredActiveUsers, filteredInactiveUsers]);
 
   const handleUserClick = (user) => {
     onUserSelect(user);
   };
+
+  const renderUserItem = (user) => (
+    <div
+      key={user.id || user.chatId}
+      onClick={() => handleUserClick(user)}
+      className={`flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${selectedUser?.id === user.id || selectedUser?._id === user.chatId
+        ? "bg-primary/30"
+        : "hover:bg-primary/20"
+        }`}
+    >
+      <div className="relative flex-shrink-0">
+        <img
+          src={user.avatar || user.images?.[0]}
+          alt={user.name}
+          className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover"
+        />
+        {user.online && (
+          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 border-2 border-white rounded-full"></span>
+        )}
+      </div>
+      <div className="flex flex-col flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-1.5 md:gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
+            <span className="font-medium truncate text-sm md:text-base">{user.name}</span>
+            {user.unreadCount > 0 && (
+              <span className="bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 min-w-[20px] text-center">
+                {user.unreadCount > 99 ? '99+' : user.unreadCount}
+              </span>
+            )}
+          </div>
+          {user.lastMessage?.timestamp && (
+            <span className="text-xs text-gray-500 flex-shrink-0">
+              {new Date(user.lastMessage.timestamp).toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+        <span className={`text-xs truncate ${selectedUser?.id === user.id || selectedUser?._id === user.chatId ? "text-gray-500" : "text-gray-500"}`}>
+          {user.lastMessage}
+        </span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-3 md:p-4 border-r border-gray-200 h-full bg-white flex flex-col w-full md:w-80 overflow-y-auto slim-scrollbar min-w-0">
@@ -39,12 +89,10 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
       <div className="flex flex-col mb-1">
         <p className="text-base md:text-lg font-semibold mb-3 md:mb-4">Now Active</p>
         <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2">
-          {users.filter((u) => u.online).map((user) => (
-
+          {activeUsers.filter((u) => u.online).map((user) => (
             <div key={user.id} className="relative flex-shrink-0">
-
               <img
-                src={user.avatar || user.images[0]}
+                src={user.avatar || user.images?.[0]}
                 alt={user.name}
                 className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
               />
@@ -58,53 +106,25 @@ const Sidebar = ({ users, selectedUser, onUserSelect }) => {
 
       {/* Active Users */}
       <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-3">
-          {filteredUsers.map((user) => (
-            <div
-              key={user.id || user.chatId}
-              onClick={() => handleUserClick(user)}
-              className={`flex items-center gap-3 p-2 rounded-lg transition cursor-pointer ${selectedUser?.id === user.id || selectedUser?._id === user.chatId
-                  ? "bg-primary/30"
-                  : "hover:bg-primary/20"
-                }`}
-            >
-
-              {/* <p>{user.images[0]}</p> */}
-
-              <div className="relative flex-shrink-0">
-
-                <img
-                  src={user.avatar || user.images[0]}
-                  alt={user.name}
-                  className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover"
-                />
-                {user.online && (
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 border-2 border-white rounded-full"></span>
-                )}
-              </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1.5 md:gap-2">
-                  <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
-                    <span className="font-medium truncate text-sm md:text-base">{user.name}</span>
-                    {user.unreadCount > 0 && (
-                      <span className="bg-primary text-white text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 min-w-[20px] text-center">
-                        {user.unreadCount > 99 ? '99+' : user.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  {user.lastMessage?.timestamp && (
-                    <span className="text-xs text-gray-500 flex-shrink-0">
-                      {new Date(user.lastMessage.timestamp).toLocaleTimeString()}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-xs truncate ${selectedUser?.id === user.id || selectedUser?._id === user.chatId ? "text-gray-500" : "text-gray-500"}`}>
-                  {user.lastMessage}
-                </span>
-              </div>
+        {filteredActiveUsers.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-gray-600 mb-2 mt-3">Active Chats</p>
+            <div className="flex flex-col gap-3">
+              {filteredActiveUsers.map((user) => renderUserItem(user))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {/* Inactive Users Section */}
+        {filteredInactiveUsers.length > 0 && (
+          <div className="mt-4">
+            <div className="w-full h-[1px] bg-gray-200 mb-3"></div>
+            <p className="text-sm font-semibold text-gray-600 mb-2">Blocked Chats</p>
+            <div className="flex flex-col gap-3 opacity-60">
+              {filteredInactiveUsers.map((user) => renderUserItem(user))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

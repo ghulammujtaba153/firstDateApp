@@ -39,7 +39,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
 
   // Check if current user is the blocker
   const isCurrentUserBlocker = chat?.blockedBy && normalizeId(chat.blockedBy) === normalizeId(currentUser?._id);
-  
+
   // Check if chat is blocked by someone
   const isChatBlocked = !!chat?.blockedBy;
 
@@ -104,7 +104,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
           ...data.request,
           status: 'accepted'
         }));
-        setReceivedRequest((prev) => 
+        setReceivedRequest((prev) =>
           prev && normalizeId(prev.userId) === normalizeId(data.acceptedByUserId)
             ? { ...prev, ...data.request, status: 'accepted' }
             : prev
@@ -120,7 +120,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
           ...data.request,
           status: 'rejected'
         }));
-        setReceivedRequest((prev) => 
+        setReceivedRequest((prev) =>
           prev && normalizeId(prev.userId) === normalizeId(data.rejectedByUserId)
             ? { ...prev, ...data.request, status: 'rejected' }
             : prev
@@ -131,7 +131,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
     const handleStatusUpdated = (data) => {
       // Update the request status if it matches our conversation
       if (normalizeId(data.request.userId) === normalizeId(otherParticipant._id) ||
-          normalizeId(data.request.requestedTo) === normalizeId(otherParticipant._id)) {
+        normalizeId(data.request.requestedTo) === normalizeId(otherParticipant._id)) {
         // Update received request if this is from the other participant
         if (normalizeId(data.request.userId) === normalizeId(otherParticipant._id)) {
           setReceivedRequest((prev) => ({
@@ -142,7 +142,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
         }
         // Update sent request if this is our request to the other participant
         if (normalizeId(data.request.requestedTo) === normalizeId(otherParticipant._id) &&
-            normalizeId(data.request.userId) === normalizeId(currentUser._id)) {
+          normalizeId(data.request.userId) === normalizeId(currentUser._id)) {
           setSentRequest((prev) => ({
             ...prev,
             ...data.request,
@@ -231,18 +231,18 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
     // Optimistically update UI
     updateChatStatus(chat._id, nextStatus)
     setChatStatusLoading(true)
-    
+
     try {
       const response = await axios.post(`${BASE_URL}/api/chat/update-status`, {
         chatId: chat._id,
         userId: currentUser._id,
         status: nextStatus,
       })
-      
+
       // Confirm with server response
       const updatedStatus = response.data?.status || nextStatus
       updateChatStatus(chat._id, updatedStatus)
-      
+
       console.log("✅ Chat status updated:", updatedStatus)
     } catch (error) {
       console.error("Unable to update chat status", error)
@@ -279,7 +279,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
 
   const getBlockedStatusText = () => {
     if (!isChatBlocked) return null;
-    
+
     if (isCurrentUserBlocker) {
       return "You blocked this chat";
     } else {
@@ -297,11 +297,10 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
 
       {/* Blocked status indicator */}
       {isChatBlocked && (
-        <div className={`text-center py-2 mb-2 rounded-md text-sm font-medium ${
-          isCurrentUserBlocker
-            ? "bg-yellow-100 text-yellow-800"
-            : "bg-red-100 text-red-800"
-        }`}>
+        <div className={`text-center py-2 mb-2 rounded-md text-sm font-medium ${isCurrentUserBlocker
+          ? "bg-yellow-100 text-yellow-800"
+          : "bg-red-100 text-red-800"
+          }`}>
           {getBlockedStatusText()}
         </div>
       )}
@@ -313,7 +312,7 @@ const ChatHeader = ({ chat, otherParticipant, onInitiateCall, onBack }) => {
           </button>
 
           <img
-            src={otherParticipant?.avatar || otherParticipant.images[0] || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"}
+            src={otherParticipant?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face"}
             className="w-10 h-10 rounded-full object-cover"
           />
 

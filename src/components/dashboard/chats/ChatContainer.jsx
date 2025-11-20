@@ -44,6 +44,8 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
       return participantId && participantId !== currentId
     })
 
+    found.avatar = found.avatar || found.images?.[0]
+
     return found || selectedChat.participants[0]
   }, [selectedChat, currentUserId, currentUser?._id])
 
@@ -53,19 +55,19 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
       console.warn("Cannot generate channel name: missing participants or currentUser")
       return null
     }
-    
+
     // Get both users (current user and other participant)
     const currentId = currentUserId?.toString() || currentUser?._id?.toString()
-    
+
     // Helper function to extract username from participant
     const extractUsername = (participant) => {
       if (!participant) return null
-      
+
       // Try username first
       if (participant.username && typeof participant.username === 'string' && participant.username.trim()) {
         return participant.username.trim()
       }
-      
+
       // Try email (extract part before @)
       if (participant.email && typeof participant.email === 'string') {
         const emailParts = participant.email.split('@')
@@ -73,37 +75,37 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
           return emailParts[0].trim()
         }
       }
-      
+
       // Fallback to ID (last 8 characters for readability)
       if (participant._id) {
         const idStr = participant._id.toString()
         return idStr.slice(-8)
       }
-      
+
       return null
     }
-    
+
     // Get usernames for both participants
     const currentUserParticipant = selectedChat.participants.find(p => {
       const participantId = p._id?.toString() || p?.toString()
       return participantId === currentId
     }) || currentUser
-    
+
     const otherUserParticipant = selectedChat.participants.find(p => {
       const participantId = p._id?.toString() || p?.toString()
       return participantId !== currentId
     })
-    
+
     if (!otherUserParticipant) {
       console.warn("Cannot find other participant for channel name generation")
       console.debug("Participants:", selectedChat.participants, "Current ID:", currentId)
       return null
     }
-    
+
     // Extract usernames
     const currentUsername = extractUsername(currentUserParticipant)
     const otherUsername = extractUsername(otherUserParticipant)
-    
+
     if (!currentUsername || !otherUsername) {
       console.warn("Cannot extract usernames for channel generation", {
         currentUserParticipant,
@@ -113,18 +115,18 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
       })
       return null
     }
-    
+
     // Sort usernames alphabetically to ensure both users generate the same channel name
     const usernames = [currentUsername, otherUsername]
       .map(u => u.toLowerCase().trim())
       .filter(u => u.length > 0)
       .sort()
-    
+
     if (usernames.length !== 2) {
       console.warn("Invalid usernames for channel generation:", { currentUsername, otherUsername, usernames })
       return null
     }
-    
+
     // Generate channel name: chat_user1_user2 (sorted, sanitized)
     const channelName = `chat_${usernames[0]}_${usernames[1]}`.replace(/[^a-z0-9_]/g, '_')
     console.log("Generated channel name:", channelName, "from users:", usernames, "participants:", selectedChat.participants.map(p => ({ id: p._id, username: p.username, email: p.email })))
@@ -162,13 +164,13 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
           userId: currentUser._id,
           status: 'read'
         })
-        
+
         // Update local message states to reflect read status
         setMessages(prev => prev.map(msg => {
           // Only update messages not sent by current user
           const msgSenderId = msg.sender?._id?.toString() || msg.sender?.toString()
           const currentUserIdStr = currentUser._id?.toString()
-          
+
           if (msgSenderId !== currentUserIdStr && msg.status !== 'read') {
             return { ...msg, status: 'read' }
           }
@@ -312,11 +314,11 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
         }
       })
       console.log("✓ Call invitation sent via Socket.io")
-            return true
+      return true
     } catch (err) {
       console.info("Socket invitation error (non-critical):", err.message || err)
-            return true
-          }
+      return true
+    }
   }, [socket, isConnected, otherParticipant?._id])
 
   // Navigate to call page (defined first to avoid hoisting issues)
@@ -330,14 +332,14 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     console.log("  - Current User ID:", currentUser._id);
     console.log("  - Other Participant:", otherParticipant);
     console.log("  - Chat ID:", selectedChat?._id);
-    
+
     try {
       // Generate token for RTC
       console.log("  - Generating Agora token...");
       console.log("    - Endpoint:", `${BASE_URL}/generate-token`);
       console.log("    - Channel Name:", channelName);
       console.log("    - UID:", currentUser._id.toString());
-      
+
       const tokenResponse = await axios.post(`${BASE_URL}/generate-token`, {
         channelName: channelName,
         uid: currentUser._id.toString()
@@ -365,7 +367,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
       console.log("    - Other Participant Username:", callData.otherParticipant?.username);
       console.log("    - Chat ID:", callData.chatId);
       console.log("    - Token:", callData.token ? "✅ Present" : "❌ Missing");
-      
+
       navigate('/call', { state: callData })
       console.log("  ✅ Navigation completed");
     } catch (error) {
@@ -387,7 +389,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     try {
       const callText = callType === 'video' ? 'Video call' : 'Audio call'
       const messageContent = `${callText} ${action}`
-      
+
       const response = await axios.post(`${BASE_URL}/api/chat/message`, {
         chatId: selectedChat._id,
         sender: currentUser._id,
@@ -437,7 +439,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     // Check if Agora is configured
     const appId = import.meta.env.VITE_AGORA_APP_ID
     console.log("  - Agora APP_ID:", appId ? "✅ Configured" : "❌ Missing");
-    
+
     if (!appId) {
       alert('Agora is not configured. Please set VITE_AGORA_APP_ID in your .env file.')
       return
@@ -445,19 +447,19 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
 
     try {
       console.log("  - Initiating call");
-      
+
       // Create call message in chat
       await createCallMessage(callType, 'initiated')
-      
+
       // Use same channel naming pattern as chat (user1_user2) for calls
       const callChannelName = getChannelName ? `call_${getChannelName.replace('chat_', '')}` : `call_${selectedChat._id}_${Date.now()}`
       const callId = `${currentUser._id}_${Date.now()}`
-      
+
       console.log("  - Generated Call Details:");
       console.log("    - Channel Name:", callChannelName);
       console.log("    - Call ID:", callId);
       console.log("    - Base Channel Name:", getChannelName);
-      
+
       // Try to send call invitation via Socket.io in background (non-blocking)
       // Socket.io is optional - RTC calls work independently
       // Socket.io is only used for call notifications, not for the actual call
@@ -468,7 +470,7 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
       } else {
         console.warn("  ⚠️ sendCallInvitation function not available");
       }
-      
+
       // Navigate to call page immediately
       // Agora RTC works independently - doesn't require Socket.io
       console.log("  - Navigating to call page...");
@@ -504,16 +506,16 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
     // Handle new messages
     const handleNewMessage = (data) => {
       const { chatId, message } = data
-      
+
       if (!message || !chatId) {
         console.warn('Invalid message data received:', data)
         return
       }
-      
+
       const messageSenderId = message.sender?._id?.toString() || message.sender?.toString()
       const currentUserIdStr = currentUser?._id?.toString()
       const isOwnMessage = messageSenderId === currentUserIdStr
-      
+
       console.log('Socket message received:', {
         chatId,
         messageId: message._id,
@@ -522,29 +524,29 @@ const ChatContainer = ({ selectedChat, currentUserId, onMessageSent, onMessagesR
         currentChat: selectedChat?._id,
         matchesCurrentChat: chatId === selectedChat?._id
       })
-      
+
       // Only process if it's for the currently selected chat
       if (chatId === selectedChat?._id) {
         setMessages(prev => {
           // Always check if message already exists (by ID) to prevent duplicates
           const exists = prev.some(m => {
-            const match = m._id === message._id || 
-                        (m._id?.toString() === message._id?.toString())
+            const match = m._id === message._id ||
+              (m._id?.toString() === message._id?.toString())
             return match
           })
-          
+
           if (exists) {
             console.log('Message already exists, skipping duplicate:', message._id)
             return prev
           }
-          
+
           console.log('Adding new message from socket:', message._id, 'isOwnMessage:', isOwnMessage)
           return [...prev, message]
         })
       } else {
         console.log('Message for different chat - updating sidebar only. Current:', selectedChat?._id, 'Message chat:', chatId)
       }
-        
+
       // Update parent's chat list last message for all messages
       // This helps update the sidebar even if chat is not selected
       if (onMessageSent && chatId) {

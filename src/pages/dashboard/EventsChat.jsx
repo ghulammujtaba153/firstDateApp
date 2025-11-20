@@ -46,7 +46,7 @@ const EventsChat = () => {
           }
         } else if (location.state?.userId) {
           // If navigating with userId, find or create chat
-          const chat = response.data.find(c => 
+          const chat = response.data.find(c =>
             c.participants.some(p => p._id === location.state.userId)
           )
           if (chat) {
@@ -127,6 +127,8 @@ const EventsChat = () => {
         return participantId !== currentId
       }
     ) || chat.participants?.[0]
+    otherParticipant.avatar = otherParticipant?.images.length > 0 ? otherParticipant?.images[0] : ""
+
 
     // Get unread count from chat object (set by backend)
     const unreadCount = chat.unreadCount || 0
@@ -194,12 +196,12 @@ const EventsChat = () => {
 
     const handleGlobalNewMessage = (data) => {
       const { chatId, message } = data
-      
+
       if (!chatId || !message) return
 
       // Update the chat's last message in the list
       updateChatLastMessage(chatId, message)
-      
+
       // Refresh unread count if message is not from current user
       const messageSenderId = message.sender?._id?.toString() || message.sender?.toString()
       const currentUserIdStr = currentUser?._id?.toString()
@@ -232,10 +234,10 @@ const EventsChat = () => {
 
     const handleGlobalCallInvite = async (data) => {
       const { from, callType, channelName, callId } = data
-      
+
       // Find the chat with the caller
       const callerId = from?.toString()
-      const chatWithCaller = chats.find(chat => 
+      const chatWithCaller = chats.find(chat =>
         chat.participants?.some(p => {
           const participantId = p._id?.toString() || p?.toString()
           return participantId === callerId
@@ -384,15 +386,15 @@ const EventsChat = () => {
   // Get caller info for global call notification
   const getCallerInfo = () => {
     if (!globalIncomingCall) return null
-    
+
     const callerId = globalIncomingCall.from?.toString()
-    const chat = incomingCallChatRef.current || chats.find(chat => 
+    const chat = incomingCallChatRef.current || chats.find(chat =>
       chat.participants?.some(p => {
         const participantId = p._id?.toString() || p?.toString()
         return participantId === callerId
       })
     )
-    
+
     if (chat) {
       const caller = chat.participants?.find(p => {
         const participantId = p._id?.toString() || p?.toString()
@@ -407,14 +409,14 @@ const EventsChat = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-1rem)] md:h-[calc(100vh-2rem)] m-2 md:m-4 shadow-lg rounded-[20px] md:rounded-[30px] overflow-hidden bg-white relative">
-      
 
-      <Sidebar 
-        users={sortedUsers} 
+
+      <Sidebar
+        users={sortedUsers}
         selectedUser={selectedChat}
         onUserSelect={handleUserSelect}
       />
-      <ChatContainer 
+      <ChatContainer
         selectedChat={selectedChat}
         currentUserId={currentUser?._id}
         onMessageSent={updateChatLastMessage}
