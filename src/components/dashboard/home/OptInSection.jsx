@@ -113,11 +113,67 @@ const OptInSection = () => {
 
       // Filter to only show "matched" status (delivered matches)
       const deliveredMatches = matchData.filter((m) => m.status === "matched");
+
+      // Calculate the current week's match window
+      // Matches are revealed Thursday 12:00 AM and should be shown until Tuesday 23:00
+      const now = new Date();
+      const currentDay = now.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+
+      // Calculate the start of the current week's match window (last Thursday 12:01 AM)
+      let daysToLastThursday;
+      if (currentDay === 4 && currentHour === 0 && currentMinute < 1) {
+        // We're in the reveal window (Thu 12:00 - 12:01), use last week's Thursday
+        daysToLastThursday = 7;
+      } else if (currentDay >= 4) {
+        // Thursday or later this week
+        daysToLastThursday = currentDay - 4;
+      } else {
+        // Sunday, Monday, Tuesday, or Wednesday - use last week's Thursday
+        daysToLastThursday = currentDay + 3; // Sun=3, Mon=4, Tue=5, Wed=6
+      }
+
+      const lastThursday = new Date(now);
+      lastThursday.setDate(now.getDate() - daysToLastThursday);
+      lastThursday.setHours(0, 1, 0, 0); // Thursday 12:01 AM
+
+      // Calculate the end of the current week's match window (next Tuesday 23:00)
+      let daysToNextTuesday;
+      if (currentDay === 2 && (currentHour > 23 || (currentHour === 23 && currentMinute >= 1))) {
+        // After Tuesday 23:01, matches should be hidden
+        daysToNextTuesday = -1; // Force no matches to show
+      } else if (currentDay <= 2) {
+        // Sunday, Monday, or Tuesday before 23:00
+        daysToNextTuesday = 2 - currentDay;
+      } else {
+        // Wednesday, Thursday, Friday, Saturday
+        daysToNextTuesday = 9 - currentDay; // Wed=6, Thu=5, Fri=4, Sat=3
+      }
+
+      const nextTuesday = new Date(now);
+      if (daysToNextTuesday >= 0) {
+        nextTuesday.setDate(now.getDate() + daysToNextTuesday);
+        nextTuesday.setHours(23, 0, 0, 0); // Tuesday 23:00
+      } else {
+        // Set to past date to hide matches
+        nextTuesday.setTime(0);
+      }
+
+      // Filter matches that were updated (revealed) within the current week window
+      const currentWeekMatches = deliveredMatches.filter((m) => {
+        const matchUpdatedAt = new Date(m.updatedAt);
+        return matchUpdatedAt >= lastThursday && matchUpdatedAt <= nextTuesday;
+      });
+
       console.log("Fetched delivered matches:", deliveredMatches);
-      setMatches(deliveredMatches);
+      console.log("Current week matches (filtered by updatedAt):", currentWeekMatches);
+      console.log("Match window:", { lastThursday, nextTuesday });
+
+      setMatches(currentWeekMatches);
 
       if (
-        deliveredMatches.length === 0 &&
+        currentWeekMatches.length === 0 &&
         optedIn &&
         windowState !== "delivering"
       ) {
@@ -149,24 +205,17 @@ const OptInSection = () => {
       return;
     }
 
-    // If opted in and has matches (active window)
-    if (optedIn && matches.length > 0) {
-      setButtonState("You Have a Match! 💕");
-      setIsDisabled(true);
-      return;
-    }
-
-    // If opted in but no matches yet (active window)
-    if (optedIn && matches.length === 0) {
-      setButtonState("You're Opted In — Matches Come Thursday!");
-      setIsDisabled(true);
-      return;
-    }
-
-    // Active window (Thu 00:01 - Tue 23:00) - can opt in
+    // Active window (Thu 00:01 - Tue 23:00) - can always toggle
     if (currentWindowState === "active") {
-      setButtonState("Opt-In for This Week");
-      setIsDisabled(false);
+      // Update button state based on optIn status, but keep switch enabled
+      if (optedIn && matches.length > 0) {
+        setButtonState("You Have a Match! 💕");
+      } else if (optedIn && matches.length === 0) {
+        setButtonState("You're Opted In — Matches Come Thursday!");
+      } else {
+        setButtonState("Opt-In for This Week");
+      }
+      setIsDisabled(false); // Always allow toggling during active window
       return;
     }
   };
@@ -208,14 +257,36 @@ const OptInSection = () => {
     };
   }, [socket, isConnected, user?._id]);
 
+  // Update UI whenever optedIn or matches change, and fetch current user state when active
+  useEffect(() => {
+    const fetchCurrentUserState = async () => {
+      if (windowState === "active" && user?._id) {
+        try {
+          const res = await axios.get(`${BASE_URL}/api/auth/${user._id}`);
+          const currentOptIn = !!res.data?.optIn;
+          // Only update if different from current state
+          if (currentOptIn !== optedIn) {
+            setOptedIn(currentOptIn);
+          }
+        } catch (err) {
+          console.warn("Failed to fetch current user state", err?.message || err);
+        }
+      }
+      updateUiState(windowState);
+    };
+
+    fetchCurrentUserState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optedIn, matches, windowState]);
+
   // Initial evaluation and ticking clock to update UI as time advances
   useEffect(() => {
     setOptedIn(!!user?.optIn);
     let lastWindow = evaluateWindow();
 
     updateUiState(lastWindow);
-    // Fetch matches on initial load if opted in and window is active/delivering
-    if (user?.optIn) {
+    // Fetch matches on initial load when window is active (regardless of optIn status)
+    if (lastWindow === "active" || lastWindow === "revealing") {
       fetchOptInMatches();
     }
 
@@ -312,16 +383,16 @@ const OptInSection = () => {
             {windowState === "locked" && !optedIn
               ? "Matching in progress. Opens Thursday"
               : windowState === "revealing"
-              ? "Matches being revealed!"
-              : optedIn
-              ? "You're in the pool. Matches come Thursday"
-              : "Turn on to join this week's matching"}
+                ? "Matches being revealed!"
+                : optedIn
+                  ? "You're in the pool. Matches come Thursday"
+                  : "Turn on to join this week's matching"}
           </p>
         </div>
         <Switch
           checked={optedIn}
           onChange={handleOptInToggle}
-          disabled={isDisabled || windowState === "locked"}
+          disabled={isDisabled}
           onColor="#3b82f6"
           onHandleColor="#ffffff"
           handleDiameter={28}
@@ -362,8 +433,8 @@ const OptInSection = () => {
         </p>
       )}
 
-      {/* Matches Display (hide if timer is running) */}
-      {optedIn && !(windowState === "locked" && matches.length === 0) && (
+      {/* Matches Display - show during active window if matches exist */}
+      {windowState === "active" && matches.length > 0 && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
             Your Matches

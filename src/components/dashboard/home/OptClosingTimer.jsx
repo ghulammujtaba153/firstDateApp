@@ -11,7 +11,7 @@ const OptClosingTimer = () => {
 
     const candidate = new Date(now);
     candidate.setDate(now.getDate() + daysUntil);
-    candidate.setHours(23, 1, 0, 0);
+    candidate.setHours(23, 0, 0, 0);
 
     // ⏳ If passed for this week -> next week
     if (candidate <= now) {
@@ -66,7 +66,7 @@ const OptClosingTimer = () => {
 
       {/* Timer Layout */}
       <div className="flex items-center justify-center gap-2 md:gap-4">
-        
+
         {/* Days */}
         <TimeBox value={format(days)} label="Days" />
 
