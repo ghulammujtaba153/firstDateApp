@@ -1,13 +1,8 @@
 import axios from 'axios';
 import { BASE_URL } from '../config/url';
 
-/**
- * Create payment intent for event
- * @param {string} eventId - Event ID
- * @param {string} userId - User ID
- * @param {string} token - Auth token
- * @returns {Promise} Payment intent response
- */
+
+
 export const createPaymentIntent = async (eventId, userId, token) => {
   try {
     const response = await axios.post(
@@ -23,14 +18,7 @@ export const createPaymentIntent = async (eventId, userId, token) => {
   }
 };
 
-/**
- * Verify payment and join event
- * @param {string} eventId - Event ID
- * @param {string} userId - User ID
- * @param {string} paymentIntentId - Payment Intent ID
- * @param {string} token - Auth token
- * @returns {Promise} Join event response
- */
+
 export const verifyPaymentAndJoinEvent = async (eventId, userId, paymentIntentId, token) => {
   try {
     const response = await axios.post(

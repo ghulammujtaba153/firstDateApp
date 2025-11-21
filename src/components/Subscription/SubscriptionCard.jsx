@@ -6,6 +6,7 @@ import { BASE_URL } from '../../config/url';
 const SubscriptionCard = ({ item, userId, onSubscribe }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  console.log("item in subscription card", item)
 
   const handleSubscribe = async () => {
     if (!userId) {
@@ -17,23 +18,15 @@ const SubscriptionCard = ({ item, userId, onSubscribe }) => {
       setLoading(true);
       setError('');
 
-      // Map plan titles to plan IDs
-      const planIdMap = {
-        'Basic Plan': 'basic',
-        'Premium Plan': 'premium',
-        'Ultimate Plan': 'ultimate',
-      };
 
-      const planId = planIdMap[item.title];
-      if (!planId) {
-        setError('Invalid plan selected');
-        return;
-      }
+
+
+
 
       // Create checkout session
       const response = await axios.post(`${BASE_URL}/api/app-subscriptions/checkout`, {
         userId,
-        planId,
+        planId: item.id,
       });
 
       if (response.data.url) {

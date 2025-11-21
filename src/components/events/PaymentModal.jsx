@@ -8,6 +8,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { createPaymentIntent, verifyPaymentAndJoinEvent } from '../../services/paymentService';
 
+
 // Initialize Stripe
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
