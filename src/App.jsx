@@ -32,6 +32,7 @@ import GoogleAuth from "./pages/GoogleAuth";
 import FreeScreenProtectedRoutes from "./components/FreeScreenProtectedRoutes";
 import Support from "./pages/dashboard/Support";
 import EventsChat from "./pages/dashboard/EventsChat";
+import Invite from "./pages/Invite";
 
 function App() {
   return (
@@ -41,7 +42,8 @@ function App() {
 
         <Route path="/" element={<UserRoutes />} />
         <Route path="/verification" element={<FaceVerification />} />
-        
+        <Route path="/invite" element={<Invite />} />
+
 
         {/* Onboarding routes - accessible to authenticated users who haven't completed onboarding */}
         <Route path="/onboarding" element={<OnBoarding />} />
@@ -168,7 +170,7 @@ function App() {
           />
 
 
-<Route
+          <Route
             path="/dashboard/support"
             element={
               <DashboardLayout>
